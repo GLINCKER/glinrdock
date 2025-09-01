@@ -1,0 +1,36 @@
+# Multi-stage build for GlinrDock controller
+# Copyright (c) 2025 GLINCKER LLC
+# Licensed under MIT License (see LICENSE-SCRIPTS)
+
+FROM scratch AS artifact-stage
+# Copy binary from build context
+COPY glinrdockd /usr/local/bin/glinrdockd
+
+# Final stage using distroless
+FROM gcr.io/distroless/static:nonroot
+
+# OCI labels for metadata
+LABEL org.opencontainers.image.title="GlinrDock"
+LABEL org.opencontainers.image.description="Lightweight, secure container management platform"
+LABEL org.opencontainers.image.version="latest"
+LABEL org.opencontainers.image.url="https://github.com/GLINCKER/glinrdock-release"
+LABEL org.opencontainers.image.source="https://github.com/GLINCKER/glinrdock-release"
+LABEL org.opencontainers.image.vendor="GLINCKER LLC"
+LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.documentation="https://github.com/GLINCKER/glinrdock-release/blob/main/README.md"
+
+# Copy binary from artifact stage
+COPY --from=artifact-stage /usr/local/bin/glinrdockd /usr/local/bin/glinrdockd
+
+# Set non-root user (nonroot user from distroless)
+USER 65532:65532
+
+# Expose HTTP port
+EXPOSE 8080
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD ["/usr/local/bin/glinrdockd", "healthcheck", "--endpoint", "http://localhost:8080/v1/health"]
+
+# Set entrypoint
+ENTRYPOINT ["/usr/local/bin/glinrdockd"]

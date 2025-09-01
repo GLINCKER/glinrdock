@@ -4,418 +4,341 @@
 
 ### What is GlinrDock?
 
-GlinrDock is a lightweight container management platform that provides a web-based interface for managing Docker containers, projects, and deployments. It's designed for production environments with enterprise-grade security features.
+GlinrDock is a lightweight container management platform that provides a web interface for managing Docker containers and Docker Compose projects. It offers team collaboration features, monitoring, and deployment capabilities.
 
 ### How is GlinrDock different from other container management tools?
 
-GlinrDock focuses on:
-- **Lightweight architecture** - minimal resource footprint
-- **Security-first design** - built-in RBAC, audit logging, and secure defaults
-- **Simple deployment** - single binary with no external dependencies
-- **Fast performance** - optimized for speed with sub-100ms response times
+- **Lightweight**: Minimal resource usage compared to Kubernetes
+- **Docker Compose compatible**: Import existing compose files
+- **Team-focused**: Built-in multi-user support and RBAC
+- **Easy setup**: 30-second installation process
+- **Production-ready**: Zero-downtime deployments and monitoring
 
-### Is GlinrDock open source?
+### Is GlinrDock free?
 
-The main source code is maintained in a private repository. This repository contains binary distributions, documentation, and installation scripts under the MIT license.
+GlinrDock offers:
+- **Free tier**: Personal projects and development use
+- **Commercial licenses**: For production and enterprise use
+- See our pricing at https://glincker.com/pricing
+
+### Where is the source code?
+
+The source code is maintained in a private repository. This public repository contains only binary distributions, documentation, and installation scripts.
 
 ## Installation Questions
 
-### What platforms are supported?
-
-GlinrDock supports:
-- **Linux**: x86_64, ARM64
-- **macOS**: x86_64 (Intel), ARM64 (Apple Silicon)
-
-All binaries are statically linked and have no external dependencies.
-
 ### What are the system requirements?
 
-**Minimum requirements:**
-- 512MB RAM
-- 1GB storage
-- Docker Engine 20.10+
+**Minimum**:
 - Linux kernel 3.10+ or macOS 10.15+
+- Docker Engine 20.10+
+- 512MB RAM
+- 1GB disk space
 
-**Recommended for production:**
+**Recommended**:
 - 2GB+ RAM
-- 10GB+ storage
-- Dedicated server or VM
+- 10GB+ disk space
+- SSD storage
+- systemd (Linux)
 
-### How do I install GlinrDock?
+### Can I run GlinrDock without Docker?
 
-**Quick install (Linux with systemd):**
+No, GlinrDock requires Docker Engine to manage containers. However, you can run GlinrDock itself as:
+- Native binary (recommended for Linux)
+- Docker container (easier deployment)
+
+### How do I install on ARM64/Apple Silicon?
+
+Use the automated installer which detects your architecture:
 ```bash
 curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
 ```
 
-**Docker Compose:**
-```bash
-curl -fsSL https://raw.githubusercontent.com/GLINCKER/glinrdock-release/main/deploy/docker-compose.yml -o docker-compose.yml
-docker-compose up -d
-```
+Or download the appropriate binary manually:
+- `glinrdockd_darwin_arm64.tar.gz` for Apple Silicon
+- `glinrdockd_linux_arm64.tar.gz` for ARM64 Linux
 
-See the [Installation Guide](INSTALL.md) for detailed instructions.
+### Can I install without sudo/root access?
 
-### Can I install GlinrDock without root access?
+The automated installer requires root privileges to:
+- Install to `/usr/local/bin`
+- Create systemd service
+- Set up system user
 
-Yes, you can install GlinrDock as a regular user:
-1. Download and extract the binary to a directory in your PATH
-2. Create a data directory in your home directory
-3. Run GlinrDock manually or with user systemd services
-
-For rootless Docker integration, see [rootless Docker setup](https://docs.docker.com/engine/security/rootless/).
+For non-root installation:
+1. Download binary manually
+2. Run in user space
+3. Use Docker installation method
 
 ## Configuration Questions
 
-### Where is the configuration stored?
+### How do I change the default port?
 
-Configuration can be set via:
-- **Environment variables** (recommended for containers)
-- **Configuration file** at `/etc/glinrdock/glinrdock.conf`
-- **Command-line flags**
-
-See the [Configuration Guide](CONFIG.md) for details.
-
-### How do I find my admin token?
-
-**For systemd installations:**
-```bash
-sudo grep ADMIN_TOKEN /etc/glinrdock/glinrdock.conf
+**Linux installation**:
+Edit `/etc/glinrdock/config.toml`:
+```toml
+[server]
+bind_addr = "127.0.0.1:9090"
 ```
 
-**For Docker Compose:**
+**Docker installation**:
 ```bash
-grep ADMIN_TOKEN .env
-# Or check container logs
-docker-compose logs glinrdock | grep "Admin token"
+docker run -p 9090:8080 ...
 ```
 
-### How do I change the port?
+### Where are my projects and data stored?
 
-Set the bind address in your configuration:
+**Linux installation**:
+- Configuration: `/etc/glinrdock/`
+- Data: `/var/lib/glinrdock/`
+- Logs: `journalctl -u glinrdockd`
+
+**Docker installation**:
+- Data volume: `glinrdock_data`
+- Container logs: `docker logs glinrdock`
+
+### How do I backup my data?
+
+**Linux**:
 ```bash
-# Environment variable
-GLINRDOCK_BIND_ADDR=0.0.0.0:8081
-
-# Or configuration file
-echo "GLINRDOCK_BIND_ADDR=0.0.0.0:8081" | sudo tee -a /etc/glinrdock/glinrdock.conf
-
-# Restart service
-sudo systemctl restart glinrdock
+sudo tar czf glinrdock-backup.tar.gz -C /var/lib/glinrdock .
 ```
 
-### How do I enable HTTPS/TLS?
-
-**Using reverse proxy (recommended):**
-Set up nginx or Caddy with TLS termination. See [CONFIG.md](CONFIG.md) for examples.
-
-**Direct TLS (if supported):**
+**Docker**:
 ```bash
-TLS_ENABLED=true
-TLS_CERT_FILE=/path/to/certificate.crt
-TLS_KEY_FILE=/path/to/private.key
-GLINRDOCK_BIND_ADDR=0.0.0.0:8443
+docker run --rm -v glinrdock_data:/data -v $(pwd):/backup alpine tar czf /backup/glinrdock-backup.tar.gz -C /data .
 ```
 
-## Usage Questions
+### How do I reset the admin password/token?
 
-### How do I access the web interface?
-
-After installation, open your browser to:
-- **Default**: http://localhost:8080
-- **Custom port**: http://localhost:YOUR_PORT
-- **Remote access**: http://your-server-ip:8080
-
-Login with your admin token.
-
-### Can I use GlinrDock with existing Docker containers?
-
-Yes, GlinrDock can manage existing Docker containers. It will detect and display running containers when connected to the Docker daemon.
-
-### Does GlinrDock support Docker Compose files?
-
-GlinrDock can import Docker Compose files and convert them to native project configurations. Some Compose-specific features may not be fully supported.
-
-### How do I create multiple projects?
-
-In the web interface:
-1. Click "Projects" in the navigation
-2. Click "New Project"
-3. Fill in project details
-4. Add services to the project
-
-Projects help organize related containers and services.
-
-### Can I use private Docker registries?
-
-Yes, GlinrDock supports authentication with private Docker registries. Configure registry credentials in the project or service settings.
-
-## Docker Integration Questions
-
-### Does GlinrDock require special Docker configuration?
-
-No special configuration is required. GlinrDock works with standard Docker installations. Ensure the GlinrDock user has access to the Docker socket:
-
-```bash
-sudo usermod -aG docker glinrdock
-```
-
-### Can I use GlinrDock with Docker Swarm?
-
-Current versions focus on single-node Docker management. Docker Swarm support may be added in future releases.
-
-### Does GlinrDock work with rootless Docker?
-
-Yes, GlinrDock can work with rootless Docker installations. Configure the Docker socket path appropriately:
-```bash
-DOCKER_HOST=unix:///run/user/$(id -u)/docker.sock
-```
-
-### How does GlinrDock handle Docker networks?
-
-GlinrDock can create and manage Docker networks for projects. Services within the same project can communicate using service names.
-
-## Security Questions
-
-### Is GlinrDock secure for production use?
-
-Yes, GlinrDock is designed with security as a priority:
-- **Authentication required** for all API access
-- **RBAC system** for granular permissions
-- **Audit logging** for all operations
-- **Rate limiting** to prevent abuse
-- **Security defaults** for all configurations
-
-See the [Security Guide](SECURITY.md) for best practices.
-
-### How do I secure the admin token?
-
-**Generate a strong token:**
+**Generate new token**:
 ```bash
 openssl rand -hex 32
 ```
 
-**Store securely:**
-- Use environment variables in production
-- Set proper file permissions (640) for config files
-- Rotate tokens regularly
-
-### Can I use GlinrDock behind a firewall?
-
-Yes, GlinrDock works well behind firewalls:
-- Bind to localhost and use a reverse proxy
-- Configure firewall rules to allow specific IPs
-- Use VPN access for remote management
-
-### How do I enable audit logging?
-
-Audit logging is enabled by default. Configure log level and file location:
+**Linux installation**:
 ```bash
-GLINRDOCK_LOG_LEVEL=info
-GLINRDOCK_LOG_FILE=/var/lib/glinrdock/logs/glinrdock.log
+sudo sed -i 's/admin_token = .*/admin_token = "NEW_TOKEN_HERE"/' /etc/glinrdock/config.toml
+sudo systemctl restart glinrdockd
+```
+
+**Docker installation**:
+```bash
+docker run -e GLINRDOCK_ADMIN_TOKEN="NEW_TOKEN_HERE" ...
+```
+
+## Usage Questions
+
+### Can I import existing Docker Compose files?
+
+Yes! GlinrDock supports importing Docker Compose files:
+1. Go to **Projects** → **Import**
+2. Upload your `docker-compose.yml` file
+3. Review and deploy
+
+### How do I manage multiple environments?
+
+Use GlinrDock's project-based organization:
+- Create separate projects for dev/staging/prod
+- Use environment variables for configuration
+- Deploy to different Docker networks
+
+### Can I use private Docker registries?
+
+Yes, configure registry credentials in:
+- **Settings** → **Registries**
+- Add registry URL, username, and password
+- GlinrDock will authenticate automatically
+
+### Does GlinrDock support Docker Swarm or Kubernetes?
+
+Currently, GlinrDock focuses on single-node Docker and Docker Compose deployments. Swarm and Kubernetes support are planned for future releases.
+
+## Troubleshooting Questions
+
+### GlinrDock won't start - "port already in use"
+
+Check what's using port 8080:
+```bash
+sudo netstat -tlnp | grep 8080
+```
+
+Solutions:
+- Kill the conflicting process
+- Change GlinrDock's port (see configuration above)
+- Use a different port: `-p 8081:8080` (Docker)
+
+### Can't connect to Docker daemon
+
+**Check Docker is running**:
+```bash
+sudo systemctl status docker
+sudo systemctl start docker
+```
+
+**Check permissions**:
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+# Log out and back in
+
+# Or for GlinrDock user (Linux installation)
+sudo usermod -aG docker glinrdock
+sudo systemctl restart glinrdockd
+```
+
+### Web interface shows "Unauthorized"
+
+**Check admin token**:
+```bash
+# Linux
+sudo grep admin_token /etc/glinrdock/config.toml
+
+# Docker
+docker logs glinrdock | grep "Admin token"
+```
+
+**Clear browser cache**:
+- Hard refresh (Ctrl+F5)
+- Clear browser data
+- Try incognito/private mode
+
+### How do I enable debug logging?
+
+**Linux installation**:
+Edit `/etc/glinrdock/config.toml`:
+```toml
+[logging]
+level = "debug"
+```
+
+**Docker installation**:
+```bash
+docker run -e GLINRDOCK_LOG_LEVEL="debug" ...
+```
+
+View logs:
+```bash
+# Linux
+sudo journalctl -u glinrdockd -f
+
+# Docker  
+docker logs -f glinrdock
 ```
 
 ## Performance Questions
 
-### How much resources does GlinrDock use?
+### How many containers can GlinrDock manage?
 
-**Typical resource usage:**
-- **Memory**: 50-200MB depending on workload
-- **CPU**: Low usage, spikes during API operations
-- **Storage**: Minimal, mainly for database and logs
-
-### Can GlinrDock handle many containers?
-
-GlinrDock is optimized for performance and can manage hundreds of containers efficiently. Performance depends on:
-- Available system resources
+GlinrDock can manage hundreds of containers, limited primarily by:
+- Available system resources (RAM, CPU)
 - Docker daemon performance
-- Network latency
+- Network and storage I/O
 
-### How do I optimize GlinrDock performance?
+### Does GlinrDock affect container performance?
 
-1. **Adequate resources**: Ensure sufficient RAM and CPU
-2. **SSD storage**: Use SSD for database and logs
-3. **Network**: Low-latency network to Docker daemon
-4. **Tuning**: Adjust timeouts and rate limits in configuration
+No, GlinrDock acts as a management layer and doesn't impact container runtime performance. It uses the Docker API for all operations.
 
-## Backup and Recovery Questions
+### How much memory does GlinrDock use?
 
-### How do I backup GlinrDock data?
+- Binary installation: 50-100MB
+- Docker installation: 100-200MB (including base image)
+- Memory usage scales with number of managed containers
 
-**Data directory backup:**
+## Security Questions
+
+### Is it safe to expose GlinrDock to the internet?
+
+**Not recommended without proper security measures**:
+- Use HTTPS with valid certificates
+- Implement strong authentication
+- Use firewall and access controls
+- Consider VPN access
+
+**Better approach**:
+- Keep on private network
+- Use VPN or SSH tunneling for remote access
+- Implement reverse proxy with authentication
+
+### How do I secure the Docker socket?
+
+The Docker socket provides root-equivalent access. Security options:
+
+1. **Use TCP with TLS** (advanced):
 ```bash
-sudo systemctl stop glinrdock
-sudo tar -czf glinrdock-backup-$(date +%Y%m%d).tar.gz -C /var/lib/glinrdock data
-sudo systemctl start glinrdock
+dockerd --host=tcp://127.0.0.1:2376 --tls --tlscert=... --tlskey=...
 ```
 
-**Configuration backup:**
+2. **Restrict socket permissions**:
 ```bash
-sudo cp /etc/glinrdock/glinrdock.conf /tmp/glinrdock-config-backup.conf
+sudo chmod 660 /var/run/docker.sock
 ```
 
-### How do I restore from backup?
+3. **Use Docker-in-Docker** (more complex setup)
 
-```bash
-sudo systemctl stop glinrdock
-sudo rm -rf /var/lib/glinrdock/data
-sudo tar -xzf glinrdock-backup-YYYYMMDD.tar.gz -C /var/lib/glinrdock/
-sudo chown -R glinrdock:glinrdock /var/lib/glinrdock
-sudo systemctl start glinrdock
-```
+## Support Questions
 
-### Are automatic backups supported?
+### How do I get help?
 
-Yes, GlinrDock can be configured for automatic database backups:
-```bash
-DB_BACKUP_ENABLED=true
-DB_BACKUP_INTERVAL=6h
-```
+1. **Documentation**: Check our comprehensive docs
+2. **GitHub Issues**: Report bugs or feature requests
+3. **Community**: GitHub Discussions for questions
+4. **Enterprise**: Contact support@glincker.com
 
-## Upgrade Questions
+### How do I report a security issue?
+
+**DO NOT** use public GitHub issues for security vulnerabilities.
+
+Email: **security@glincker.com**
+
+See our [Security Policy](SECURITY.md) for details.
+
+### How often is GlinrDock updated?
+
+- **Patch releases**: Monthly (bug fixes)
+- **Minor releases**: Quarterly (new features)  
+- **Major releases**: Yearly (breaking changes)
+- **Security updates**: As needed
+
+### Can I contribute to GlinrDock?
+
+While the source code is private, you can contribute by:
+- Reporting issues and feature requests
+- Improving documentation
+- Sharing usage examples
+- Providing feedback
+
+## Migration Questions
+
+### How do I migrate from Portainer?
+
+1. Export your Docker Compose files from Portainer
+2. Install GlinrDock
+3. Import compose files into GlinrDock projects
+4. Verify deployments and remove Portainer
+
+### Can I run GlinrDock alongside other management tools?
+
+Yes, GlinrDock uses standard Docker APIs and can coexist with other tools. However, avoid simultaneous management of the same containers to prevent conflicts.
 
 ### How do I upgrade GlinrDock?
 
-**Using install script:**
+**Linux installation**:
 ```bash
 curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
 ```
 
-**Manual upgrade:**
-1. Stop the service
-2. Backup data and configuration
-3. Download new binary
-4. Replace old binary
-5. Start service
+**Docker installation**:
+```bash
+docker-compose pull
+docker-compose up -d
+```
 
-See the [Upgrade Guide](UPGRADE.md) for detailed instructions.
-
-### Will upgrades break my existing containers?
-
-No, GlinrDock upgrades do not affect your running containers. GlinrDock manages containers through the Docker API without modifying container configurations directly.
-
-### How do I rollback an upgrade?
-
-1. Stop GlinrDock service
-2. Restore previous binary
-3. Restore configuration backup if needed
-4. Restore data backup if required
-5. Start service
-
-Keep binary backups for easy rollbacks.
-
-## Troubleshooting Questions
-
-### GlinrDock won't start - what should I check?
-
-1. **Check logs:**
-   ```bash
-   sudo journalctl -u glinrdock.service -f
-   ```
-
-2. **Verify configuration:**
-   ```bash
-   sudo cat /etc/glinrdock/glinrdock.conf
-   ```
-
-3. **Check port availability:**
-   ```bash
-   sudo netstat -tlnp | grep :8080
-   ```
-
-4. **Verify Docker access:**
-   ```bash
-   sudo -u glinrdock docker ps
-   ```
-
-### I can't access the web interface
-
-1. **Check service status:**
-   ```bash
-   sudo systemctl status glinrdock
-   ```
-
-2. **Test local access:**
-   ```bash
-   curl http://localhost:8080/health
-   ```
-
-3. **Check firewall:**
-   ```bash
-   sudo ufw status
-   sudo iptables -L
-   ```
-
-4. **Verify bind address:**
-   Check if GlinrDock is bound to correct interface.
-
-### API requests return "Unauthorized"
-
-1. **Verify admin token:**
-   ```bash
-   sudo grep ADMIN_TOKEN /etc/glinrdock/glinrdock.conf
-   ```
-
-2. **Test with correct token:**
-   ```bash
-   curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8080/v1/info
-   ```
-
-3. **Check token format:**
-   Ensure token is properly formatted and has sufficient length.
-
-### Docker containers don't appear in GlinrDock
-
-1. **Check Docker socket permissions:**
-   ```bash
-   ls -la /var/run/docker.sock
-   sudo usermod -aG docker glinrdock
-   ```
-
-2. **Test Docker access:**
-   ```bash
-   sudo -u glinrdock docker ps
-   ```
-
-3. **Restart GlinrDock service:**
-   ```bash
-   sudo systemctl restart glinrdock
-   ```
-
-## License and Support Questions
-
-### What license does GlinrDock use?
-
-The binary distributions and documentation in this repository are licensed under the MIT License. The main source code is maintained in a private repository.
-
-### How do I get support?
-
-**Community support:**
-- [GitHub Issues](https://github.com/GLINCKER/glinrdock-release/issues) for bug reports
-- [Documentation](https://github.com/GLINCKER/glinrdock-release/tree/main/docs) for guides and references
-
-**Security issues:**
-- Email: security@glinr.dev
-- See [Security Policy](SECURITY.md) for details
-
-### Is commercial support available?
-
-Contact us at support@glincker.com for enterprise support options, including:
-- Dedicated support channels
-- Priority issue resolution
-- Custom feature development
-- Training and consulting
-
-### Can I contribute to GlinrDock?
-
-While the main source code is private, you can contribute to:
-- Documentation improvements
-- Installation scripts
-- Docker configurations
-- Bug reports and feature requests
-
-Submit pull requests to this repository for documentation and packaging improvements.
+Data and configuration are preserved during upgrades.
 
 ---
 
-**Don't see your question here?** Check the [Troubleshooting Guide](TROUBLESHOOTING.md) or [open an issue](https://github.com/GLINCKER/glinrdock-release/issues) on GitHub.
+**Still have questions?** 
+- Check our [Troubleshooting Guide](TROUBLESHOOTING.md)
+- Ask in [GitHub Discussions](https://github.com/GLINCKER/glinrdock-release/discussions)
+- Contact support@glincker.com

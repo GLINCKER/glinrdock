@@ -1,11 +1,14 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Security Vulnerability
-    url: https://github.com/GLINCKER/glinrdock-release/blob/main/SECURITY.md
-    about: Report security vulnerabilities privately
-  - name: General Discussion
+  - name: 🔒 Security Vulnerability Report
+    url: https://github.com/GLINCKER/glinrdock-release/blob/main/docs/SECURITY.md
+    about: Report security vulnerabilities privately through our coordinated disclosure process
+  - name: 📖 Documentation & Installation Help
+    url: https://glincker.github.io/glinrdock-release/
+    about: Visit our documentation site for installation guides and troubleshooting
+  - name: 💬 General Discussion
     url: https://github.com/GLINCKER/glinrdock-release/discussions
     about: Ask questions and discuss features with the community
-  - name: Documentation
-    url: https://github.com/GLINCKER/glinrdock-release/blob/main/README.md
-    about: Read the documentation and guides
+  - name: 📞 Commercial Support
+    url: mailto:support@glincker.com
+    about: Contact GLINCKER LLC for enterprise support and licensing

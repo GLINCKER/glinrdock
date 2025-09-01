@@ -1,721 +1,554 @@
 # Troubleshooting Guide
 
-This guide covers common issues and solutions for GlinrDock installation and operation.
+This guide covers common issues and their solutions for GlinrDock.
 
 ## Installation Issues
 
-### Install Script Fails
+### Installation Script Fails
 
-**Problem**: Install script exits with errors during execution.
-
-**Common causes and solutions:**
-
-1. **Insufficient permissions:**
-   ```bash
-   # Run with sudo
-   curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
-   ```
-
-2. **Network connectivity issues:**
-   ```bash
-   # Test connectivity
-   curl -I https://github.com/GLINCKER/glinrdock-release/releases/latest
-   
-   # Use offline installation
-   curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh
-   curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/glinrdockd_linux_amd64.tar.gz
-   chmod +x install.sh
-   sudo LOCAL_BINARY=./glinrdockd_linux_amd64.tar.gz ./install.sh
-   ```
-
-3. **Unsupported architecture:**
-   ```bash
-   # Check your architecture
-   uname -m
-   dpkg --print-architecture  # On Debian/Ubuntu
-   
-   # Available architectures: x86_64 (amd64), aarch64 (arm64)
-   ```
-
-4. **Missing dependencies:**
-   ```bash
-   # Install required tools
-   # Ubuntu/Debian
-   sudo apt update && sudo apt install -y curl tar
-   
-   # CentOS/RHEL
-   sudo yum install -y curl tar
-   ```
-
-### Binary Download Fails
-
-**Problem**: Cannot download GlinrDock binary from GitHub releases.
-
-**Solutions:**
-
-1. **Check release availability:**
-   ```bash
-   curl -s https://api.github.com/repos/GLINCKER/glinrdock-release/releases/latest | grep "tag_name"
-   ```
-
-2. **Manual download:**
-   ```bash
-   # Go to releases page and download manually
-   # https://github.com/GLINCKER/glinrdock-release/releases
-   ```
-
-3. **Proxy/firewall issues:**
-   ```bash
-   # Configure proxy if needed
-   export http_proxy=http://proxy.company.com:8080
-   export https_proxy=http://proxy.company.com:8080
-   ```
-
-### Checksum Verification Fails
-
-**Problem**: SHA256 checksum doesn't match downloaded file.
-
-**Solutions:**
-
-1. **Re-download the file:**
-   ```bash
-   rm glinrdockd_linux_amd64.tar.gz
-   curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/glinrdockd_linux_amd64.tar.gz
-   ```
-
-2. **Verify checksum file:**
-   ```bash
-   # Re-download checksum
-   curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/glinrdockd_linux_amd64.tar.gz.sha256
-   
-   # Manual verification
-   sha256sum glinrdockd_linux_amd64.tar.gz
-   cat glinrdockd_linux_amd64.tar.gz.sha256
-   ```
-
-3. **Network corruption:**
-   Use a different network or download method if checksums consistently fail.
-
-## Service Startup Issues
-
-### systemd Service Won't Start
-
-**Problem**: `systemctl start glinrdock` fails or service doesn't start.
-
-**Diagnosis:**
+**Error**: `curl: command not found`
 ```bash
-# Check service status
-sudo systemctl status glinrdock.service
+# Install curl first
+# Ubuntu/Debian:
+sudo apt-get update && sudo apt-get install curl
 
-# View detailed logs
-sudo journalctl -u glinrdock.service -f
-
-# Check service file
-sudo systemctl cat glinrdock.service
+# RHEL/CentOS:
+sudo yum install curl
 ```
 
-**Common causes and solutions:**
-
-1. **Binary not found or not executable:**
-   ```bash
-   # Check binary location and permissions
-   ls -la /usr/local/bin/glinrdockd
-   
-   # Fix permissions if needed
-   sudo chmod +x /usr/local/bin/glinrdockd
-   ```
-
-2. **Configuration file issues:**
-   ```bash
-   # Check configuration file
-   sudo ls -la /etc/glinrdock/glinrdock.conf
-   
-   # Verify syntax (no spaces around =)
-   sudo cat /etc/glinrdock/glinrdock.conf
-   
-   # Fix permissions
-   sudo chown root:glinrdock /etc/glinrdock/glinrdock.conf
-   sudo chmod 640 /etc/glinrdock/glinrdock.conf
-   ```
-
-3. **User and directory permissions:**
-   ```bash
-   # Check glinrdock user exists
-   id glinrdock
-   
-   # Create if missing
-   sudo useradd --system --user-group --home-dir /var/lib/glinrdock glinrdock
-   
-   # Fix directory permissions
-   sudo chown -R glinrdock:glinrdock /var/lib/glinrdock
-   sudo chmod 750 /var/lib/glinrdock
-   ```
-
-4. **Port already in use:**
-   ```bash
-   # Check what's using the port
-   sudo netstat -tlnp | grep :8080
-   sudo ss -tlnp | grep :8080
-   
-   # Use different port
-   sudo sed -i 's/8080/8081/g' /etc/glinrdock/glinrdock.conf
-   ```
-
-### Docker Socket Permission Issues
-
-**Problem**: GlinrDock can't access Docker daemon.
-
-**Error messages:**
-- "Permission denied" when accessing Docker socket
-- "Cannot connect to the Docker daemon"
-
-**Solutions:**
-
-1. **Add user to docker group:**
-   ```bash
-   sudo usermod -aG docker glinrdock
-   
-   # Restart service to pick up new group membership
-   sudo systemctl restart glinrdock.service
-   ```
-
-2. **Check Docker socket permissions:**
-   ```bash
-   ls -la /var/run/docker.sock
-   # Should show: srw-rw---- 1 root docker
-   
-   # Fix permissions if needed
-   sudo chmod 660 /var/run/docker.sock
-   sudo chown root:docker /var/run/docker.sock
-   ```
-
-3. **Verify Docker is running:**
-   ```bash
-   sudo systemctl status docker
-   sudo systemctl start docker
-   ```
-
-4. **Test Docker access:**
-   ```bash
-   # Test as glinrdock user
-   sudo -u glinrdock docker ps
-   ```
-
-### Data Directory Issues
-
-**Problem**: Cannot write to data directory or database errors.
-
-**Solutions:**
-
-1. **Check directory permissions:**
-   ```bash
-   ls -la /var/lib/glinrdock/
-   
-   # Fix permissions
-   sudo chown -R glinrdock:glinrdock /var/lib/glinrdock
-   sudo chmod 750 /var/lib/glinrdock
-   sudo chmod 640 /var/lib/glinrdock/data/*
-   ```
-
-2. **Disk space issues:**
-   ```bash
-   # Check available space
-   df -h /var/lib/glinrdock
-   
-   # Clean up if needed
-   sudo find /var/lib/glinrdock/logs -name "*.log" -mtime +30 -delete
-   ```
-
-3. **SELinux issues (RHEL/CentOS):**
-   ```bash
-   # Check SELinux status
-   sestatus
-   
-   # Set proper context
-   sudo semanage fcontext -a -t container_file_t "/var/lib/glinrdock(/.*)?"
-   sudo restorecon -R /var/lib/glinrdock
-   ```
-
-## Network and Connectivity Issues
-
-### Cannot Access Web Interface
-
-**Problem**: Browser cannot connect to GlinrDock dashboard.
-
-**Diagnosis steps:**
-
-1. **Test local access:**
-   ```bash
-   curl http://localhost:8080/health
-   curl -I http://localhost:8080/
-   ```
-
-2. **Check service binding:**
-   ```bash
-   sudo netstat -tlnp | grep glinrdockd
-   # Should show: tcp 0 0 0.0.0.0:8080 LISTEN pid/glinrdockd
-   ```
-
-3. **Test from remote machine:**
-   ```bash
-   # Replace SERVER_IP with actual IP
-   curl http://SERVER_IP:8080/health
-   ```
-
-**Solutions:**
-
-1. **Firewall blocking access:**
-   ```bash
-   # Ubuntu/Debian (ufw)
-   sudo ufw status
-   sudo ufw allow 8080
-   
-   # CentOS/RHEL (firewalld)
-   sudo firewall-cmd --list-ports
-   sudo firewall-cmd --add-port=8080/tcp --permanent
-   sudo firewall-cmd --reload
-   
-   # iptables
-   sudo iptables -I INPUT -p tcp --dport 8080 -j ACCEPT
-   ```
-
-2. **Wrong bind address:**
-   ```bash
-   # Check configuration
-   sudo grep BIND_ADDR /etc/glinrdock/glinrdock.conf
-   
-   # For remote access, use:
-   GLINRDOCK_BIND_ADDR=0.0.0.0:8080
-   
-   # For local only:
-   GLINRDOCK_BIND_ADDR=127.0.0.1:8080
-   ```
-
-3. **Cloud/VPS security groups:**
-   - Check AWS Security Groups, Azure NSGs, or GCP Firewall Rules
-   - Ensure port 8080 is open for inbound traffic
-
-### API Requests Return "Unauthorized"
-
-**Problem**: All API requests return 401 Unauthorized.
-
-**Diagnosis:**
+**Error**: `Permission denied` during installation
 ```bash
-# Test health endpoint (should work without auth)
-curl http://localhost:8080/health
+# Ensure you're running with sudo
+curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
 
-# Test with admin token
-curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8080/v1/info
+# Or download and inspect first
+curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh > install.sh
+chmod +x install.sh
+sudo ./install.sh
 ```
 
-**Solutions:**
-
-1. **Missing or incorrect admin token:**
-   ```bash
-   # Find admin token
-   sudo grep ADMIN_TOKEN /etc/glinrdock/glinrdock.conf
-   
-   # Test with correct format
-   curl -H "Authorization: Bearer actual-token-here" http://localhost:8080/v1/info
-   ```
-
-2. **Token too short:**
-   ```bash
-   # Generate new secure token (32+ characters)
-   NEW_TOKEN=$(openssl rand -hex 32)
-   
-   # Update configuration
-   sudo sed -i "s/ADMIN_TOKEN=.*/ADMIN_TOKEN=$NEW_TOKEN/" /etc/glinrdock/glinrdock.conf
-   sudo systemctl restart glinrdock
-   ```
-
-3. **Configuration not loaded:**
-   ```bash
-   # Check if config file is being read
-   sudo journalctl -u glinrdock.service | grep -i config
-   
-   # Verify EnvironmentFile in service
-   sudo systemctl cat glinrdock.service | grep EnvironmentFile
-   ```
-
-### CORS Errors in Browser
-
-**Problem**: Browser console shows CORS errors when accessing API.
-
-**Solutions:**
-
-1. **Configure CORS origins:**
-   ```bash
-   # Add to configuration
-   echo "CORS_ORIGINS=http://localhost:3000,https://yourdomain.com" | sudo tee -a /etc/glinrdock/glinrdock.conf
-   sudo systemctl restart glinrdock
-   ```
-
-2. **Use reverse proxy:**
-   Set up nginx or Caddy to handle CORS properly.
-
-## Docker Integration Issues
-
-### Containers Don't Appear in GlinrDock
-
-**Problem**: Running Docker containers are not visible in GlinrDock.
-
-**Solutions:**
-
-1. **Check Docker connection:**
-   ```bash
-   # Test as glinrdock user
-   sudo -u glinrdock docker ps
-   
-   # Check Docker socket path
-   sudo grep DOCKER_HOST /etc/glinrdock/glinrdock.conf
-   ```
-
-2. **Verify Docker API version:**
-   ```bash
-   docker version
-   
-   # Set specific API version if needed
-   echo "DOCKER_API_VERSION=1.40" | sudo tee -a /etc/glinrdock/glinrdock.conf
-   ```
-
-3. **Restart GlinrDock service:**
-   ```bash
-   sudo systemctl restart glinrdock
-   ```
-
-### Cannot Create or Manage Containers
-
-**Problem**: GlinrDock can see containers but cannot create or manage them.
-
-**Solutions:**
-
-1. **Check Docker daemon permissions:**
-   ```bash
-   # Ensure Docker daemon is accessible
-   sudo -u glinrdock docker info
-   ```
-
-2. **Verify Docker image access:**
-   ```bash
-   # Test image pulling
-   sudo -u glinrdock docker pull nginx:alpine
-   ```
-
-3. **Check for Docker daemon issues:**
-   ```bash
-   sudo systemctl status docker
-   sudo journalctl -u docker.service
-   ```
-
-## Performance Issues
-
-### Slow Response Times
-
-**Problem**: GlinrDock web interface or API responds slowly.
-
-**Diagnosis:**
+**Error**: `Architecture not supported`
 ```bash
-# Check resource usage
-ps aux | grep glinrdockd
-top -p $(pgrep glinrdockd)
+# Check your architecture
+uname -m
 
-# Check disk I/O
-iostat -x 1 5
+# Supported architectures:
+# x86_64 (amd64)
+# aarch64 (arm64)
 
-# Test response times
-time curl http://localhost:8080/health
+# For unsupported architectures, try Docker installation
 ```
 
-**Solutions:**
+### Binary Download Issues
 
-1. **Insufficient resources:**
-   ```bash
-   # Check available memory
-   free -h
-   
-   # Check disk space
-   df -h
-   
-   # Consider upgrading system resources
-   ```
-
-2. **Database performance:**
-   ```bash
-   # Check database file size
-   ls -lh /var/lib/glinrdock/data/glinrdock.db
-   
-   # Consider vacuum if very large (when service is stopped)
-   sudo systemctl stop glinrdock
-   sqlite3 /var/lib/glinrdock/data/glinrdock.db "VACUUM;"
-   sudo systemctl start glinrdock
-   ```
-
-3. **Network latency to Docker:**
-   ```bash
-   # Test Docker API response time
-   time docker ps
-   
-   # Consider local Docker socket if using TCP
-   ```
-
-### High Memory Usage
-
-**Problem**: GlinrDock uses excessive memory.
-
-**Solutions:**
-
-1. **Check for memory leaks:**
-   ```bash
-   # Monitor over time
-   watch 'ps aux | grep glinrdockd'
-   ```
-
-2. **Adjust log levels:**
-   ```bash
-   # Reduce logging
-   sudo sed -i 's/LOG_LEVEL=debug/LOG_LEVEL=warn/' /etc/glinrdock/glinrdock.conf
-   sudo systemctl restart glinrdock
-   ```
-
-3. **Restart service periodically:**
-   ```bash
-   # Add to cron for periodic restarts
-   echo "0 2 * * 0 systemctl restart glinrdock" | sudo crontab -
-   ```
-
-## Database Issues
-
-### Database Corruption
-
-**Problem**: Database errors or corruption messages in logs.
-
-**Solutions:**
-
-1. **Stop service and check database:**
-   ```bash
-   sudo systemctl stop glinrdock
-   
-   # Check database integrity
-   sqlite3 /var/lib/glinrdock/data/glinrdock.db "PRAGMA integrity_check;"
-   ```
-
-2. **Restore from backup:**
-   ```bash
-   # If you have a backup
-   sudo cp /path/to/backup/glinrdock.db /var/lib/glinrdock/data/
-   sudo chown glinrdock:glinrdock /var/lib/glinrdock/data/glinrdock.db
-   ```
-
-3. **Reset database (CAUTION: Data loss):**
-   ```bash
-   sudo systemctl stop glinrdock
-   sudo rm /var/lib/glinrdock/data/glinrdock.db
-   sudo systemctl start glinrdock
-   # GlinrDock will create a new database
-   ```
-
-### Migration Failures
-
-**Problem**: Database migration fails during startup.
-
-**Solutions:**
-
-1. **Check migration logs:**
-   ```bash
-   sudo journalctl -u glinrdock.service | grep -i migration
-   ```
-
-2. **Manual migration (if supported):**
-   ```bash
-   sudo systemctl stop glinrdock
-   sudo -u glinrdock /usr/local/bin/glinrdockd --migrate-db
-   sudo systemctl start glinrdock
-   ```
-
-## Log Analysis
-
-### Reading GlinrDock Logs
-
-**systemd installations:**
+**Error**: `404 Not Found` when downloading
 ```bash
-# Current logs
-sudo journalctl -u glinrdock.service -f
+# Check latest release version
+curl -s https://api.github.com/repos/GLINCKER/glinrdock-release/releases/latest | grep tag_name
 
-# Recent logs
-sudo journalctl -u glinrdock.service --since "1 hour ago"
-
-# All logs
-sudo journalctl -u glinrdock.service --no-pager
+# Download specific version
+curl -LO https://github.com/GLINCKER/glinrdock-release/releases/download/v1.0.0/glinrdockd_linux_amd64.tar.gz
 ```
 
-**File-based logging:**
+**Error**: `Checksum mismatch`
 ```bash
-# If configured with log file
-sudo tail -f /var/lib/glinrdock/logs/glinrdock.log
+# Re-download the file and checksums
+curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/glinrdockd_linux_amd64.tar.gz
+curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/SHA256SUMS
 
-# Search for errors
-sudo grep -i error /var/lib/glinrdock/logs/glinrdock.log
+# Verify with verbose output
+sha256sum -c SHA256SUMS --ignore-missing -v
 ```
 
-### Common Log Messages
-
-**"Permission denied" on Docker socket:**
-- Add glinrdock user to docker group
-- Check Docker socket permissions
-
-**"Port already in use":**
-- Change port in configuration
-- Find and stop conflicting service
-
-**"Database locked":**
-- Stop service and check for orphaned processes
-- Check file permissions on database
-
-**"Failed to connect to Docker daemon":**
-- Verify Docker is running
-- Check DOCKER_HOST configuration
-
-## Docker Compose Issues
+## Service Issues
 
 ### Service Won't Start
 
-**Problem**: `docker-compose up` fails or services don't start.
+**Check service status**:
+```bash
+sudo systemctl status glinrdockd
+```
 
-**Solutions:**
+**Common error**: `bind: address already in use`
+```bash
+# Find process using port 8080
+sudo netstat -tlnp | grep 8080
+sudo lsof -i :8080
 
-1. **Check compose file syntax:**
-   ```bash
-   docker-compose config
-   ```
+# Kill conflicting process or change GlinrDock port
+sudo systemctl edit glinrdockd
+```
 
-2. **Verify image availability:**
-   ```bash
-   docker pull ghcr.io/glincker/glinrdock:latest
-   ```
+Add override configuration:
+```ini
+[Service]
+Environment=GLINRDOCK_BIND_ADDR=127.0.0.1:8081
+```
 
-3. **Check environment variables:**
-   ```bash
-   # Verify .env file
-   cat .env
-   
-   # Check for missing ADMIN_TOKEN
-   grep ADMIN_TOKEN .env
-   ```
+**Common error**: `permission denied: /var/run/docker.sock`
+```bash
+# Add glinrdock user to docker group
+sudo usermod -aG docker glinrdock
+sudo systemctl restart glinrdockd
 
-4. **Volume mount issues:**
-   ```bash
-   # Check Docker socket accessibility
-   ls -la /var/run/docker.sock
-   
-   # Ensure Docker is running
-   docker info
-   ```
+# Or fix socket permissions (less secure)
+sudo chmod 666 /var/run/docker.sock
+```
 
-### Cannot Access Through Docker
+**Common error**: `no such file or directory: /usr/local/bin/glinrdockd`
+```bash
+# Verify binary exists and is executable
+ls -la /usr/local/bin/glinrdockd
+sudo chmod +x /usr/local/bin/glinrdockd
 
-**Problem**: Cannot access GlinrDock running in Docker container.
+# Or reinstall
+curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
+```
 
-**Solutions:**
+### Service Crashes or Restarts
 
-1. **Check port mapping:**
-   ```bash
-   docker-compose ps
-   # Should show: 0.0.0.0:8080->8080/tcp
-   ```
+**Check logs**:
+```bash
+# Recent logs
+sudo journalctl -u glinrdockd --since "1 hour ago"
 
-2. **Test container health:**
-   ```bash
-   docker-compose exec glinrdock curl localhost:8080/health
-   ```
+# Follow logs in real-time
+sudo journalctl -u glinrdockd -f
 
-3. **Check container logs:**
-   ```bash
-   docker-compose logs glinrdock
-   ```
+# All logs
+sudo journalctl -u glinrdockd --no-pager
+```
 
-## Getting Help
+**Common causes**:
+- Out of memory (check with `free -h`)
+- Disk space full (check with `df -h`)
+- Docker daemon not running
+- Configuration file errors
 
-### Before Seeking Help
+## Docker Installation Issues
 
-1. **Check logs** for specific error messages
-2. **Verify configuration** files and permissions
-3. **Test basic connectivity** (curl commands)
-4. **Review recent changes** to system or configuration
+### Container Won't Start
 
-### Information to Include
+**Check container status**:
+```bash
+docker ps -a | grep glinrdock
+docker logs glinrdock
+```
+
+**Common error**: `docker: permission denied`
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+# Log out and back in, or:
+newgrp docker
+
+# Test Docker access
+docker run hello-world
+```
+
+**Common error**: `pull access denied`
+```bash
+# Check image name and tag
+docker images | grep glinrdock
+
+# Pull image manually
+docker pull ghcr.io/glincker/glinrdock:latest
+
+# Or use specific version
+docker pull ghcr.io/glincker/glinrdock:v1.0.0
+```
+
+**Common error**: `port is already allocated`
+```bash
+# Find process using port
+sudo netstat -tlnp | grep 8080
+
+# Use different port
+docker run -p 8081:8080 ...
+
+# Or stop conflicting container
+docker stop $(docker ps -q --filter publish=8080)
+```
+
+### Volume Mount Issues
+
+**Error**: `invalid mount config`
+```bash
+# Check volume syntax
+docker run -v glinrdock_data:/var/lib/glinrdock ...
+
+# Create volume explicitly
+docker volume create glinrdock_data
+```
+
+**Error**: `permission denied` in container
+```bash
+# Check volume ownership
+docker exec glinrdock ls -la /var/lib/glinrdock
+
+# Fix permissions
+docker exec --user root glinrdock chown -R glinrdock:glinrdock /var/lib/glinrdock
+```
+
+## Web Interface Issues
+
+### Cannot Access Web Interface
+
+**Check if service is running**:
+```bash
+# Linux
+sudo systemctl status glinrdockd
+
+# Docker
+docker ps | grep glinrdock
+```
+
+**Check network connectivity**:
+```bash
+# Test locally
+curl http://localhost:8080/v1/health
+
+# Test from remote machine
+curl http://YOUR_SERVER_IP:8080/v1/health
+```
+
+**Check firewall settings**:
+```bash
+# UFW (Ubuntu)
+sudo ufw status
+sudo ufw allow 8080/tcp
+
+# firewalld (RHEL/CentOS)
+sudo firewall-cmd --list-ports
+sudo firewall-cmd --permanent --add-port=8080/tcp
+sudo firewall-cmd --reload
+
+# iptables (manual)
+sudo iptables -L | grep 8080
+```
+
+### Authentication Issues
+
+**Error**: `Unauthorized` or `Invalid token`
+```bash
+# Get admin token
+# Linux:
+sudo grep admin_token /etc/glinrdock/config.toml
+
+# Docker:
+docker logs glinrdock | grep "Admin token"
+docker exec glinrdock cat /etc/glinrdock/config.toml | grep admin_token
+```
+
+**Clear browser cache**:
+- Hard refresh: Ctrl+F5 (Windows/Linux) or Cmd+Shift+R (Mac)
+- Clear browser data and cookies
+- Try incognito/private browsing mode
+
+**Reset admin token**:
+```bash
+# Generate new token
+NEW_TOKEN=$(openssl rand -hex 32)
+
+# Linux:
+sudo sed -i "s/admin_token = .*/admin_token = \"$NEW_TOKEN\"/" /etc/glinrdock/config.toml
+sudo systemctl restart glinrdockd
+
+# Docker:
+docker run -e GLINRDOCK_ADMIN_TOKEN="$NEW_TOKEN" ...
+```
+
+### Interface Loads but Shows Errors
+
+**Check browser console**:
+1. Open Developer Tools (F12)
+2. Check Console tab for JavaScript errors
+3. Check Network tab for failed API requests
+
+**Common API errors**:
+- `CORS errors`: Check GlinrDock is bound to correct interface
+- `Connection refused`: Verify GlinrDock is running
+- `Timeout errors`: Check system resources and Docker daemon
+
+## Docker Integration Issues
+
+### Cannot Connect to Docker Daemon
+
+**Verify Docker is running**:
+```bash
+sudo systemctl status docker
+sudo systemctl start docker
+
+# Test Docker access
+docker ps
+```
+
+**Check Docker socket permissions**:
+```bash
+ls -la /var/run/docker.sock
+
+# Should show: srw-rw---- 1 root docker
+# If not, fix permissions:
+sudo chown root:docker /var/run/docker.sock
+sudo chmod 660 /var/run/docker.sock
+```
+
+**For Docker-in-Docker setups**:
+```bash
+# Mount Docker binary and socket
+docker run -v /usr/bin/docker:/usr/bin/docker -v /var/run/docker.sock:/var/run/docker.sock ...
+```
+
+### Container Operations Fail
+
+**Error**: `container not found`
+- Container may have been removed outside GlinrDock
+- Refresh the interface
+- Check Docker directly: `docker ps -a`
+
+**Error**: `network not found`
+```bash
+# List networks
+docker network ls
+
+# Recreate default network
+docker network create glinrdock_default
+```
+
+**Error**: `volume not found`
+```bash
+# List volumes
+docker volume ls
+
+# Recreate volume
+docker volume create PROJECT_VOLUME_NAME
+```
+
+## Performance Issues
+
+### High Memory Usage
+
+**Check system memory**:
+```bash
+free -h
+top -p $(pgrep glinrdockd)
+
+# For Docker
+docker stats glinrdock
+```
+
+**Optimize GlinrDock**:
+```bash
+# Linux - limit memory in service file
+sudo systemctl edit glinrdockd
+```
+
+Add:
+```ini
+[Service]
+MemoryMax=512M
+```
+
+**Clean up Docker resources**:
+```bash
+# Remove unused containers, networks, images
+docker system prune -f
+
+# Remove unused volumes (careful!)
+docker volume prune -f
+```
+
+### High CPU Usage
+
+**Check processes**:
+```bash
+top -p $(pgrep glinrdockd)
+htop
+```
+
+**Common causes**:
+- Too many containers being monitored
+- Frequent log polling
+- Docker daemon issues
+
+**Solutions**:
+- Reduce log monitoring frequency in settings
+- Restart Docker daemon: `sudo systemctl restart docker`
+- Restart GlinrDock: `sudo systemctl restart glinrdockd`
+
+### Slow Web Interface
+
+**Check network latency**:
+```bash
+# Test API response time
+time curl http://localhost:8080/v1/health
+```
+
+**Browser issues**:
+- Disable browser extensions
+- Clear cache and cookies
+- Try different browser
+- Check browser Developer Tools for slow requests
+
+**System issues**:
+- Check disk space: `df -h`
+- Check I/O wait: `iostat -x 1`
+- Check system load: `uptime`
+
+## Configuration Issues
+
+### Invalid Configuration File
+
+**Check configuration syntax**:
+```bash
+# Linux
+sudo cat /etc/glinrdock/config.toml
+
+# Look for syntax errors
+sudo glinrdockd --config /etc/glinrdock/config.toml --check-config
+```
+
+**Reset to default configuration**:
+```bash
+sudo cp /etc/glinrdock/config.toml /etc/glinrdock/config.toml.backup
+
+# Regenerate default config
+sudo /usr/local/bin/glinrdockd --generate-config > /tmp/config.toml
+sudo cp /tmp/config.toml /etc/glinrdock/config.toml
+sudo chown glinrdock:glinrdock /etc/glinrdock/config.toml
+sudo systemctl restart glinrdockd
+```
+
+### Environment Variable Issues
+
+**Docker environment variables not working**:
+```bash
+# Check variables are set
+docker exec glinrdock env | grep GLINRDOCK
+
+# Restart container with correct variables
+docker run -e GLINRDOCK_LOG_LEVEL=debug ...
+```
+
+## Networking Issues
+
+### Cannot Access from Remote Hosts
+
+**Check bind address**:
+```bash
+# Should bind to 0.0.0.0 for remote access
+netstat -tlnp | grep glinrdockd
+
+# Linux - edit config
+sudo nano /etc/glinrdock/config.toml
+# Change: bind_addr = "0.0.0.0:8080"
+
+# Docker - ensure correct port mapping
+docker run -p 8080:8080 ...  # Not -p 127.0.0.1:8080:8080
+```
+
+**Security note**: Only bind to 0.0.0.0 if necessary and behind firewall/proxy.
+
+### DNS Resolution Issues
+
+**Check DNS inside containers**:
+```bash
+docker exec CONTAINER_NAME nslookup google.com
+
+# Fix DNS in Docker daemon
+sudo nano /etc/docker/daemon.json
+```
+
+Add:
+```json
+{
+  "dns": ["8.8.8.8", "8.8.4.4"]
+}
+```
+
+```bash
+sudo systemctl restart docker
+```
+
+## Data Recovery
+
+### Restore from Backup
+
+**Linux installation**:
+```bash
+sudo systemctl stop glinrdockd
+sudo tar xzf glinrdock-backup.tar.gz -C /var/lib/glinrdock/
+sudo chown -R glinrdock:glinrdock /var/lib/glinrdock/
+sudo systemctl start glinrdockd
+```
+
+**Docker installation**:
+```bash
+docker-compose down
+docker run --rm -v glinrdock_data:/data -v $(pwd):/backup alpine tar xzf /backup/glinrdock-backup.tar.gz -C /data
+docker-compose up -d
+```
+
+### Recover Lost Projects
+
+**Check Docker directly**:
+```bash
+# Find containers that may belong to lost projects
+docker ps -a --format "table {{.Names}}\t{{.Image}}\t{{.Status}}"
+
+# Check container labels
+docker inspect CONTAINER_NAME | grep -A5 -B5 Label
+```
+
+## Getting More Help
+
+### Enable Debug Logging
+
+**Linux**:
+```bash
+sudo nano /etc/glinrdock/config.toml
+# Change: level = "debug"
+sudo systemctl restart glinrdockd
+```
+
+**Docker**:
+```bash
+docker run -e GLINRDOCK_LOG_LEVEL=debug ...
+```
+
+### Collect System Information
+
+```bash
+# Create support bundle
+{
+  echo "=== System Info ==="
+  uname -a
+  echo "=== Docker Info ==="
+  docker version
+  docker info
+  echo "=== GlinrDock Status ==="
+  systemctl status glinrdockd
+  echo "=== Recent Logs ==="
+  journalctl -u glinrdockd --since "1 hour ago" | tail -50
+} > glinrdock-debug.txt
+```
+
+### Report Issues
 
 When reporting issues, include:
+1. GlinrDock version
+2. Operating system and version
+3. Docker version
+4. Installation method used
+5. Error messages and logs
+6. Steps to reproduce the issue
 
-1. **System information:**
-   ```bash
-   uname -a
-   cat /etc/os-release
-   docker --version
-   glinrdockd --version
-   ```
+**GitHub Issues**: https://github.com/GLINCKER/glinrdock-release/issues
+**Enterprise Support**: support@glincker.com
 
-2. **Configuration (sanitized):**
-   ```bash
-   # Remove sensitive values like tokens
-   sudo grep -v "TOKEN\|SECRET" /etc/glinrdock/glinrdock.conf
-   ```
+---
 
-3. **Error logs:**
-   ```bash
-   sudo journalctl -u glinrdock.service --since "1 hour ago" --no-pager
-   ```
-
-4. **Network and permissions:**
-   ```bash
-   sudo netstat -tlnp | grep :8080
-   ls -la /var/lib/glinrdock/
-   id glinrdock
-   ```
-
-### Support Channels
-
-- **GitHub Issues**: [Report bugs and issues](https://github.com/GLINCKER/glinrdock-release/issues)
-- **Documentation**: [Browse documentation](https://github.com/GLINCKER/glinrdock-release/tree/main/docs)
-- **Security Issues**: security@glinr.dev
-
-## Emergency Recovery
-
-### Complete System Reset
-
-**CAUTION: This will delete all GlinrDock data**
-
-```bash
-# Stop service
-sudo systemctl stop glinrdock.service
-
-# Remove data (CAUTION: Data loss!)
-sudo rm -rf /var/lib/glinrdock/data/*
-
-# Reset configuration to defaults
-sudo cp /etc/glinrdock/glinrdock.conf /etc/glinrdock/glinrdock.conf.backup
-sudo rm /etc/glinrdock/glinrdock.conf
-
-# Re-run installation
-curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
-```
-
-### Service Recovery
-
-**If service is completely broken:**
-
-```bash
-# Stop everything
-sudo systemctl stop glinrdock.service
-sudo pkill -f glinrdockd
-
-# Reinstall service
-sudo systemctl disable glinrdock.service
-sudo rm /etc/systemd/system/glinrdock.service
-sudo systemctl daemon-reload
-
-# Re-run installation script
-curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
-```
-
-Remember to restore your data and configuration backups after emergency recovery procedures.
+**Still having issues?**
+- Check our [FAQ](FAQ.md)
+- Ask in [GitHub Discussions](https://github.com/GLINCKER/glinrdock-release/discussions)
+- Review [installation guides](INSTALL_LINUX.md)

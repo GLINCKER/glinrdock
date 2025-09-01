@@ -1,0 +1,170 @@
+name: Smoke Tests
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  assets-check:
+    name: Verify Release Assets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: List release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Release: ${{ github.event.release.tag_name }}"
+          echo "Listing release assets..."
+          gh release view "${{ github.event.release.tag_name }}" --repo "${{ github.repository }}" --json assets --jq '.assets[] | .name'
+
+      - name: Download SHA256SUMS
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Downloading SHA256SUMS file..."
+          gh release download "${{ github.event.release.tag_name }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "SHA256SUMS*" \
+            --dir ./checksums
+
+      - name: Verify checksums exist
+        run: |
+          echo "Checking SHA256SUMS file..."
+          if [ ! -f ./checksums/SHA256SUMS ]; then
+            echo "ERROR: SHA256SUMS file not found in release assets"
+            exit 1
+          fi
+          
+          echo "SHA256SUMS content:"
+          cat ./checksums/SHA256SUMS
+          
+          # Verify the file has content
+          if [ ! -s ./checksums/SHA256SUMS ]; then
+            echo "ERROR: SHA256SUMS file is empty"
+            exit 1
+          fi
+          
+          echo "✅ SHA256SUMS file verified"
+
+      - name: Download and verify binary checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd ./checksums
+          
+          # Download Linux AMD64 binary for verification
+          echo "Downloading sample binary for checksum verification..."
+          gh release download "${{ github.event.release.tag_name }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "*linux_amd64*" \
+            --skip-existing || echo "No linux_amd64 binary found, skipping binary verification"
+          
+          # If we have binaries, verify their checksums
+          if ls *linux_amd64* 1> /dev/null 2>&1; then
+            echo "Verifying checksums..."
+            sha256sum -c SHA256SUMS --ignore-missing
+            echo "✅ Binary checksums verified"
+          else
+            echo "ℹ️ No binaries found to verify, checking SHA256SUMS format only"
+            # Just verify the SHA256SUMS file has the expected format
+            if grep -q "^[a-f0-9]\{64\}  " SHA256SUMS; then
+              echo "✅ SHA256SUMS format is valid"
+            else
+              echo "ERROR: SHA256SUMS format appears invalid"
+              exit 1
+            fi
+          fi
+
+  container-smoke:
+    name: Container Smoke Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull and run container
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/glinrdock:${{ github.event.release.tag_name }}"
+          echo "Testing container image: $IMAGE"
+          
+          # Pull the image
+          docker pull "$IMAGE"
+          
+          # Run container in background
+          docker run --rm -d \
+            --name glinrdock-smoke-test \
+            -p 18080:8080 \
+            -e ADMIN_TOKEN="smoke-test-token" \
+            --tmpfs /tmp:size=100M,mode=1777 \
+            "$IMAGE"
+          
+          echo "Container started, waiting for startup..."
+          sleep 5
+
+      - name: Test health endpoint
+        run: |
+          echo "Testing health endpoint..."
+          
+          # Poll health endpoint for up to 30 seconds
+          timeout=30
+          elapsed=0
+          success=false
+          
+          while [ $elapsed -lt $timeout ]; do
+            if curl -f -s http://localhost:18080/v1/health > /dev/null; then
+              echo "✅ Health check passed after ${elapsed}s"
+              success=true
+              break
+            fi
+            
+            echo "Health check failed, retrying in 2s... (${elapsed}s/${timeout}s)"
+            sleep 2
+            elapsed=$((elapsed + 2))
+          done
+          
+          if [ "$success" = false ]; then
+            echo "ERROR: Health check failed after ${timeout}s"
+            echo "Container logs:"
+            docker logs glinrdock-smoke-test
+            exit 1
+          fi
+
+      - name: Test health endpoint response
+        run: |
+          echo "Testing health endpoint response format..."
+          
+          response=$(curl -s http://localhost:18080/v1/health)
+          echo "Health response: $response"
+          
+          # Basic validation that we get some response
+          if [ -z "$response" ]; then
+            echo "ERROR: Empty response from health endpoint"
+            exit 1
+          fi
+          
+          echo "✅ Health endpoint responding correctly"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "Cleaning up container..."
+          docker stop glinrdock-smoke-test 2>/dev/null || true
+          docker rm glinrdock-smoke-test 2>/dev/null || true

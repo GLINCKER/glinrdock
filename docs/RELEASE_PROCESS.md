@@ -69,54 +69,121 @@ Each release includes statically-linked binaries for:
 
 ## Release Process
 
-### 1. Release Planning
+The GlinrDock release process follows a structured **tag → draft → publish** workflow with comprehensive validation at each step.
 
-**Pre-release checklist:**
-- [ ] Security review completed
-- [ ] Feature freeze implemented
-- [ ] Documentation updated
-- [ ] Breaking changes documented
-- [ ] Migration guide prepared (if needed)
+### Overview: Tag → Draft → Publish Flow
 
-### 2. Version Tagging
+```mermaid
+graph TB
+    A[Create Git Tag] --> B[Automated Draft Creation]
+    B --> C[Manual Review & Validation]
+    C --> D[Complete Release Checklist]
+    D --> E[Publish Release]
+    E --> F[Automated Asset Processing]
+    F --> G[Container Registry Push]
+    G --> H[Post-Release Monitoring]
+    
+    style A fill:#e3f2fd
+    style E fill:#f3e5f5
+    style H fill:#e8f5e8
+```
 
-**Tag creation process:**
-1. **Update version** in source code
-2. **Create release notes** from changelog
-3. **Create signed tag**:
-   ```bash
-   git tag -s v1.0.0 -m "Release v1.0.0"
-   git push origin v1.0.0
-   ```
+### Step 1: Tag Creation
 
-### 3. Automated Draft Creation (Path A)
+**Prerequisites:**
+- All code changes merged to main branch
+- Version updated in source code
+- [Release checklist](RELEASE_CHECKLIST.md) initiated
 
-**Tag Push Process:**
-- Triggered by tag push to `v*` pattern
-- Creates draft GitHub release automatically
-- Uploads artifacts from `_staging/$VERSION/` if present
-- No secrets required beyond `GITHUB_TOKEN`
+**Create and push tag:**
+```bash
+# Create annotated tag
+git tag -a v1.0.0 -m "Release v1.0.0"
 
-### 4. Release Processing (Path B)
+# Push tag to trigger draft creation
+git push origin v1.0.0
+```
 
-**Publication Trigger:**
-When draft is manually published, workflow automatically:
-- [ ] Downloads all public release assets
-- [ ] Verifies SHA256 checksums
-- [ ] Extracts Linux binaries (amd64, arm64)
-- [ ] Builds multi-arch container images
-- [ ] Pushes to GitHub Container Registry
-- [ ] Runs Trivy security scans
-- [ ] Fails build on HIGH/CRITICAL vulnerabilities
+### Step 2: Automated Draft Creation
 
-### 5. Release Publication
+**Triggered by:** Tag push matching `v*` pattern
 
-**Manual Steps:**
-1. **Review draft release** created by automation
-2. **Update release notes** using template
-3. **Publish release** to trigger container build
-4. **Verify container images** in GHCR
-5. **Monitor security scan results**
+**Automated actions:**
+- Creates draft GitHub release
+- Auto-generates release notes using [.github/release.yml](../.github/release.yml)
+- Uploads artifacts from `_staging/$VERSION/` (if present)
+- Categorizes changes: Added, Changed, Fixed, Security
+
+**No manual intervention required at this step**
+
+### Step 3: Manual Review and Validation
+
+**Release manager actions:**
+1. **Review auto-generated release notes**
+   - Verify all significant changes are captured
+   - Add context for breaking changes
+   - Enhance descriptions for clarity
+
+2. **Complete pre-publication validation**
+   - Follow [Release Checklist](RELEASE_CHECKLIST.md) thoroughly
+   - Test installation methods on target platforms
+   - Verify all artifacts and checksums
+
+3. **Update release notes**
+   - Add installation instructions
+   - Include migration notes (if applicable)
+   - Highlight security fixes prominently
+
+### Step 4: Release Publication
+
+**Trigger:** Manual "Publish release" action in GitHub
+
+**Automated processing on publish:**
+- Downloads all public release assets
+- Verifies SHA256 checksums against SHA256SUMS
+- Extracts Linux binaries (amd64, arm64)
+- Builds multi-arch container images
+- Pushes to GitHub Container Registry (ghcr.io)
+- Runs Trivy security scans
+- **Fails build on HIGH/CRITICAL vulnerabilities**
+
+### Step 5: Post-Publication Monitoring
+
+**Immediate verification:**
+- [ ] Container images available in GHCR
+- [ ] Installation scripts working correctly
+- [ ] Documentation site updated
+- [ ] No security scan failures
+
+**Ongoing monitoring:**
+- GitHub Issues for installation problems
+- Download statistics and usage metrics
+- Security vulnerability reports
+
+## Release Validation Tools
+
+### Automated Release Notes
+The repository uses [.github/release.yml](../.github/release.yml) to automatically generate categorized release notes:
+
+- **🚀 Added**: New features and enhancements
+- **🔧 Changed**: Breaking changes and updates  
+- **🐛 Fixed**: Bug fixes and corrections
+- **🔒 Security**: Security-related changes
+- **📦 Dependencies**: Dependency updates
+- **🧹 Maintenance**: Internal improvements
+
+**Excluded from highlights:** chore, docs, refactor commits
+
+### Manual Validation Checklist
+The comprehensive [Release Checklist](RELEASE_CHECKLIST.md) ensures thorough validation:
+
+- **Build verification**: All platforms and architectures
+- **Security compliance**: SBOM, vulnerability scans, dependency review
+- **Installation testing**: Ubuntu, Debian, RHEL, container deployments
+- **Documentation updates**: Installation guides, breaking changes, security advisories
+- **Post-release monitoring**: Registry verification, issue tracking
+
+**Both tools must be used together** - auto-generated notes provide the foundation, while the manual checklist ensures quality and security standards.
 
 ## Build Process
 

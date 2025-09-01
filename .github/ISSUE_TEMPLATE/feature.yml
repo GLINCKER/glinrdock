@@ -33,26 +33,57 @@ body:
       required: true
 
   - type: textarea
-    id: problem
+    id: business_outcome
     attributes:
-      label: Problem Statement
-      description: What problem does this feature solve? What's the motivation?
+      label: Business Outcome & Impact
+      description: |
+        What business problem does this solve? What value would it provide?
+        Focus on the "why" and business impact, not the "how".
       placeholder: |
-        Is your feature request related to a problem? Please describe.
-        Example: "I'm always frustrated when..."
+        Example business outcomes:
+        - "Reduce deployment time from 30 minutes to 5 minutes"
+        - "Enable team to manage 50+ containers without manual oversight"
+        - "Eliminate security compliance violations during container deployment"
+        - "Save 10 hours per week on container monitoring tasks"
+      
+        Describe the impact:
+        - Who benefits from this feature?
+        - How does it improve their workflow?
+        - What are the measurable benefits?
     validations:
       required: true
 
   - type: textarea
-    id: solution
+    id: problem
     attributes:
-      label: Proposed Solution
-      description: Describe the solution you'd like to see implemented
+      label: Current Problem/Gap
+      description: |
+        What specific problem or limitation currently prevents achieving the business outcome?
+        Be specific about what doesn't work today.
       placeholder: |
-        Describe your proposed solution:
-        - How should it work?
-        - What should the user experience be?
-        - Any specific implementation details?
+        Current state description:
+        - "Currently we have to manually..." 
+        - "There's no way to..."
+        - "Users get frustrated because..."
+        - "We lose time/money because..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: minimal_solution
+    attributes:
+      label: Minimal Viable Change
+      description: |
+        What is the smallest possible change that would deliver meaningful value?
+        Think MVP - what's the 80/20 solution that provides the most impact with least complexity?
+      placeholder: |
+        Minimal solution that would help:
+        - "Just need a simple button to..."
+        - "A basic API endpoint that returns..."
+        - "A config option to enable/disable..."
+        - "Show status in the UI so users can..."
+        
+        This doesn't need to be the full solution, just the minimum that provides value.
     validations:
       required: true
 
@@ -89,29 +120,40 @@ body:
       required: true
 
   - type: dropdown
-    id: priority
+    id: business_priority
     attributes:
-      label: Priority
-      description: How important is this feature to you?
+      label: Business Priority
+      description: What's the business impact if this feature is not implemented?
       options:
-        - Nice to have (would be useful)
-        - Important (would significantly improve workflow)
-        - Critical (blocking current work)
+        - Low (nice to have, minor convenience improvement)
+        - Medium (noticeable productivity/efficiency gain)
+        - High (significant workflow blocker or competitive advantage)
+        - Critical (major business process blocked or security/compliance issue)
     validations:
       required: true
 
-  - type: dropdown
-    id: complexity
+  - type: input
+    id: timeline
     attributes:
-      label: Estimated Complexity
-      description: How complex do you think this feature would be to implement?
-      options:
-        - Simple (minor change, quick to implement)
-        - Medium (moderate effort, some design needed)
-        - Complex (significant effort, major changes)
-        - Unknown (not sure about implementation complexity)
+      label: Business Timeline
+      description: Is there a business deadline or timeline driving this request?
+      placeholder: "Q2 2025 product launch, upcoming audit, team scaling to 50+ developers, etc."
     validations:
       required: false
+
+  - type: dropdown
+    id: user_impact
+    attributes:
+      label: User Impact Scope
+      description: How many users or teams would benefit from this feature?
+      options:
+        - Individual (just me or my specific use case)
+        - Team (5-15 people on my team)
+        - Department (multiple teams, 15-50 people)  
+        - Organization (company-wide, 50+ people)
+        - Community (many external users would benefit)
+    validations:
+      required: true
 
   - type: textarea
     id: use_cases

@@ -1,23 +1,3 @@
-GlinrDock Binary Distribution Repository License
-
-Copyright (c) 2025 GLINCKER LLC
-
-This repository contains multiple components with different licensing terms:
-
-## 1. GlinrDock Controller Binary (Proprietary)
-The GlinrDock controller binary (glinrdockd) and associated container images are proprietary software owned by GLINCKER LLC. Distribution and use of the binary is governed by the End-User License Agreement (EULA.md).
-
-## 2. Installation Scripts and Automation (MIT License)
-Installation scripts, deployment configurations, and build automation are licensed under the MIT License. See LICENSE-SCRIPTS for full terms.
-
-## 3. Documentation (CC BY 4.0)
-Documentation, guides, and user materials are licensed under Creative Commons Attribution 4.0 International License. See LICENSE-DOCS for full terms.
-
-## Default License (MIT)
-For any files not explicitly covered by the above categories, the following MIT License applies:
-
----
-
 MIT License
 
 Copyright (c) 2025 GLINCKER LLC
@@ -39,3 +19,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+This license applies to:
+- Installation scripts (scripts/install.sh, scripts/uninstall.sh)
+- Deployment configurations (deploy/*, packaging/*)
+- Container definitions (Dockerfile.*, docker-compose.yml)
+- GitHub workflows and automation (.github/*)
+- Build and packaging scripts

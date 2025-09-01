@@ -63,11 +63,27 @@ body:
       required: true
 
   - type: input
-    id: version
+    id: controller_version
     attributes:
-      label: GlinrDock Version
-      description: What version of GlinrDock are you running?
+      label: Controller Version
+      description: What version of GlinrDock Controller are you running?
       placeholder: v1.0.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: version_output
+    attributes:
+      label: Version Command Output
+      description: |
+        Please run `glinrdockd --version` and paste the complete output below.
+        If using Docker Compose, run: `docker compose exec glinrdock glinrdockd --version`
+      placeholder: |
+        glinrdockd version v1.0.0
+        Build: abc123def
+        Built: 2025-01-01T12:00:00Z
+        Go: go1.21.0
+      render: shell
     validations:
       required: true
 
@@ -77,9 +93,10 @@ body:
       label: Installation Method
       description: How did you install GlinrDock?
       options:
-        - Install script (recommended)
+        - systemd service (install script)
         - Docker Compose
-        - Manual installation
+        - Manual binary installation
+        - Container (docker run)
         - Other (specify in additional context)
     validations:
       required: true
@@ -87,9 +104,9 @@ body:
   - type: input
     id: os
     attributes:
-      label: Operating System
-      description: What operating system are you using?
-      placeholder: Ubuntu 22.04, CentOS 8, etc.
+      label: Operating System and Version
+      description: What operating system and version are you using?
+      placeholder: "Ubuntu 22.04.3 LTS, CentOS Stream 8, macOS 13.6, etc."
     validations:
       required: true
 
@@ -97,23 +114,62 @@ body:
     id: docker
     attributes:
       label: Docker Version
-      description: What version of Docker are you using?
-      placeholder: Docker version 20.10.21
+      description: What version of Docker are you using? (Run `docker --version`)
+      placeholder: "Docker version 24.0.7, build afdd53b"
     validations:
       required: true
 
   - type: textarea
     id: logs
     attributes:
-      label: Log Output
+      label: Log Output (Required)
       description: |
-        Please provide relevant log output. For systemd installations use:
-        `sudo journalctl -u glinrdock.service --no-pager -l`
+        Please provide relevant log output from the time the issue occurred:
         
-        For Docker Compose use:
-        `docker-compose logs glinrdock`
-      placeholder: Paste log output here...
+        **For systemd installations:**
+        ```bash
+        sudo journalctl -u glinrdockd.service --no-pager -l --since="10 minutes ago"
+        ```
+        
+        **For Docker Compose:**
+        ```bash
+        docker compose logs --tail=50 glinrdock
+        ```
+        
+        **For docker run:**
+        ```bash
+        docker logs --tail=50 glinrdock
+        ```
+      placeholder: Paste log output here (last 50 lines or relevant error messages)...
       render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: health_check
+    attributes:
+      label: Health Endpoint Output
+      description: |
+        Please check the health endpoint status by running:
+        ```bash
+        curl -s http://localhost:8080/v1/health | jq .
+        ```
+        Or without jq:
+        ```bash
+        curl -s http://localhost:8080/v1/health
+        ```
+        If the endpoint is not responding, note that in the output.
+      placeholder: |
+        {
+          "status": "healthy",
+          "timestamp": "2025-01-01T12:00:00Z",
+          "version": "v1.0.0"
+        }
+        
+        OR: "Connection refused" / "Timeout" / other error message
+      render: json
+    validations:
+      required: true
 
   - type: textarea
     id: config

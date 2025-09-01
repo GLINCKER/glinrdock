@@ -1,103 +1,90 @@
 #!/bin/sh
-# GlinrDock Uninstaller Script
-# POSIX-compliant uninstaller for GlinrDock
-# Supports --dry-run for safe testing
+set -e
 
-set -eu
+# GlinrDock Linux Uninstaller
+# POSIX compliant uninstallation script for GlinrDock
+#
+# Copyright (c) 2025 GLINCKER LLC
+# Licensed under MIT License (see LICENSE-SCRIPTS)
 
-# Configuration
-BIN_NAME="${GLINR_BIN_NAME:-glinrdockd}"
+# Default configuration
 DEFAULT_PREFIX="/usr/local"
-SERVICE_NAME="glinrdock"
-
-# Colors for output (if terminal supports it)
-if [ -t 1 ] && command -v tput >/dev/null 2>&1; then
-    RED=$(tput setaf 1)
-    GREEN=$(tput setaf 2)
-    YELLOW=$(tput setaf 3)
-    BLUE=$(tput setaf 4)
-    BOLD=$(tput bold)
-    RESET=$(tput sgr0)
-else
-    RED=""
-    GREEN=""
-    YELLOW=""
-    BLUE=""
-    BOLD=""
-    RESET=""
-fi
+SERVICE_NAME="glinrdockd"
+SERVICE_USER="glinrdock"
 
 # Global variables
+PREFIX=""
+PURGE=0
+NON_INTERACTIVE=0
 DRY_RUN=0
-VERBOSE=0
-PREFIX="$DEFAULT_PREFIX"
-FORCE=0
-REMOVE_DATA=0
-REMOVE_LOGS=0
+KEEP_LOGS=1
+
+# Colors for output (if terminal supports it)
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
 
 # Logging functions
 log_info() {
-    printf "%s[INFO]%s %s\n" "$BLUE" "$RESET" "$*"
-}
-
-log_warn() {
-    printf "%s[WARN]%s %s\n" "$YELLOW" "$RESET" "$*" >&2
-}
-
-log_error() {
-    printf "%s[ERROR]%s %s\n" "$RED" "$RESET" "$*" >&2
+    printf "${BLUE}[INFO]${NC} %s\n" "$1"
 }
 
 log_success() {
-    printf "%s[SUCCESS]%s %s\n" "$GREEN" "$RESET" "$*"
+    printf "${GREEN}[SUCCESS]${NC} %s\n" "$1"
 }
 
-log_debug() {
-    if [ "$VERBOSE" -eq 1 ]; then
-        printf "%s[DEBUG]%s %s\n" "$RESET" "$RESET" "$*" >&2
-    fi
+log_warning() {
+    printf "${YELLOW}[WARNING]${NC} %s\n" "$1"
 }
 
-# Print usage information
+log_error() {
+    printf "${RED}[ERROR]${NC} %s\n" "$1" >&2
+}
+
+# Usage information
 usage() {
-    cat << 'EOF'
-GlinrDock Uninstaller
+    cat << EOF
+GlinrDock Linux Uninstaller
 
 USAGE:
     uninstall.sh [OPTIONS]
 
 OPTIONS:
-    --dry-run           Show what would be removed without actually removing
-    --prefix DIR        Set installation prefix (default: /usr/local)
-    --force             Force removal even if service is running
-    --remove-data       Also remove user data directory
-    --remove-logs       Also remove log files
-    --verbose           Enable verbose output
+    --purge               Remove all data including projects and logs
+    --keep-data          Keep data directory (default behavior)
+    --remove-logs        Remove log files (logs are kept by default)
+    --prefix PATH        Installation prefix (default: /usr/local)
+    --non-interactive    Run without prompts for CI/automation
+    --dry-run           Show what would be removed without making changes
     --help              Show this help message
 
-ENVIRONMENT VARIABLES:
-    GLINR_BIN_NAME      Binary name to uninstall (default: glinrdockd)
-    GLINR_DESTDIR       Installation prefix override
-
 EXAMPLES:
+    # Standard uninstall (keeps data and logs)
+    sudo ./uninstall.sh
+
+    # Complete removal including all data
+    sudo ./uninstall.sh --purge
+
     # Dry run to see what would be removed
-    ./uninstall.sh --dry-run
+    sudo ./uninstall.sh --dry-run
 
-    # Remove with custom prefix
-    ./uninstall.sh --prefix /opt/glinr
+    # Non-interactive uninstall for CI
+    sudo ./uninstall.sh --non-interactive
 
-    # Force removal and clean up data
-    ./uninstall.sh --force --remove-data --remove-logs
+DATA PRESERVATION:
+    By default, the following are preserved:
+    - User data in /var/lib/glinrdock
+    - Configuration files in /etc/glinrdock
+    - Log files in /var/log/glinrdock
 
-    # Verbose dry run
-    ./uninstall.sh --dry-run --verbose
+    Use --purge to remove all data and configuration files.
+    Use --remove-logs to also remove log files.
 
-The uninstaller will:
-1. Stop and disable the systemd service (if present)
-2. Remove the binary from PREFIX/bin/
-3. Remove systemd service file (if present)
-4. Remove configuration directory (if --remove-data)
-5. Remove log files (if --remove-logs)
+REQUIREMENTS:
+    - Root privileges (run with sudo)
+    - systemd init system
 
 EOF
 }
@@ -105,30 +92,30 @@ EOF
 # Parse command line arguments
 parse_args() {
     while [ $# -gt 0 ]; do
-        case "$1" in
-            --dry-run)
-                DRY_RUN=1
-                log_info "Dry run mode enabled - no files will be removed"
-                ;;
-            --prefix)
+        case $1 in
+            --purge)
+                PURGE=1
                 shift
-                if [ $# -eq 0 ] || [ -z "$1" ]; then
-                    log_error "Option --prefix requires a directory argument"
-                    exit 1
-                fi
-                PREFIX="$1"
                 ;;
-            --force)
-                FORCE=1
-                ;;
-            --remove-data)
-                REMOVE_DATA=1
+            --keep-data)
+                PURGE=0
+                shift
                 ;;
             --remove-logs)
-                REMOVE_LOGS=1
+                KEEP_LOGS=0
+                shift
                 ;;
-            --verbose)
-                VERBOSE=1
+            --prefix)
+                PREFIX="$2"
+                shift 2
+                ;;
+            --non-interactive)
+                NON_INTERACTIVE=1
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN=1
+                shift
                 ;;
             --help|-h)
                 usage
@@ -136,298 +123,376 @@ parse_args() {
                 ;;
             *)
                 log_error "Unknown option: $1"
-                usage >&2
+                usage
                 exit 1
                 ;;
         esac
-        shift
     done
+
+    # Set defaults for unspecified values
+    PREFIX=${PREFIX:-$DEFAULT_PREFIX}
 }
 
-# Check if systemctl is available and service exists
-service_exists() {
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl list-unit-files "$SERVICE_NAME.service" >/dev/null 2>&1
-    else
-        false
+# Check if running as root
+check_root() {
+    if [ "$(id -u)" -ne 0 ]; then
+        log_error "This script must be run as root. Please use sudo."
+        exit 1
     fi
 }
 
-# Check if service is running
-service_running() {
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl is-active "$SERVICE_NAME" >/dev/null 2>&1
+# Execute command with dry-run support
+execute() {
+    local cmd="$1"
+    local description="$2"
+    
+    if [ $DRY_RUN -eq 1 ]; then
+        log_info "[DRY RUN] $description"
+        log_info "[DRY RUN] Would execute: $cmd"
     else
-        false
+        log_info "$description"
+        eval "$cmd" || {
+            log_error "Failed: $description"
+            return 1
+        }
     fi
 }
 
-# Stop and disable systemd service
-stop_service() {
-    if ! service_exists; then
-        log_debug "systemd service $SERVICE_NAME.service does not exist"
+# Confirm destructive action
+confirm_action() {
+    local action="$1"
+    local default_response="${2:-n}"
+    
+    if [ $NON_INTERACTIVE -eq 1 ]; then
+        case $default_response in
+            y|Y) return 0 ;;
+            *) return 1 ;;
+        esac
+    fi
+    
+    if [ $DRY_RUN -eq 1 ]; then
+        log_info "[DRY RUN] Would prompt: $action"
         return 0
     fi
+    
+    printf "%s [y/N]: " "$action"
+    read -r response
+    case $response in
+        [Yy]*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-    if service_running; then
-        if [ "$FORCE" -eq 0 ]; then
-            log_error "Service $SERVICE_NAME is currently running"
-            log_error "Use --force to stop and remove it, or stop it manually first:"
-            log_error "  sudo systemctl stop $SERVICE_NAME"
-            exit 1
-        fi
-
-        log_info "Stopping systemd service: $SERVICE_NAME"
-        if [ "$DRY_RUN" -eq 0 ]; then
-            if ! sudo systemctl stop "$SERVICE_NAME" 2>/dev/null; then
-                log_error "Failed to stop service $SERVICE_NAME"
-                exit 1
+# Check for existing installation
+check_installation() {
+    local binary_path="$PREFIX/bin/$SERVICE_NAME"
+    local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
+    
+    if [ ! -f "$binary_path" ] && [ ! -f "$service_file" ]; then
+        log_warning "GlinrDock does not appear to be installed"
+        log_warning "Binary not found: $binary_path"
+        log_warning "Service file not found: $service_file"
+        
+        if [ $NON_INTERACTIVE -eq 0 ]; then
+            if ! confirm_action "Continue with cleanup anyway?"; then
+                log_info "Uninstall cancelled"
+                exit 0
             fi
         fi
-    else
-        log_debug "Service $SERVICE_NAME is not running"
     fi
+    
+    log_info "Found GlinrDock installation"
+    if [ -f "$binary_path" ]; then
+        log_info "Binary: $binary_path"
+    fi
+    if [ -f "$service_file" ]; then
+        log_info "Service: $service_file"
+    fi
+}
 
-    log_info "Disabling systemd service: $SERVICE_NAME"
-    if [ "$DRY_RUN" -eq 0 ]; then
-        if ! sudo systemctl disable "$SERVICE_NAME" 2>/dev/null; then
-            log_warn "Could not disable service $SERVICE_NAME (may not be enabled)"
-        fi
+# Stop and disable service
+stop_service() {
+    local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
+    
+    if [ ! -f "$service_file" ]; then
+        log_info "Service file not found, skipping service operations"
+        return
     fi
+    
+    log_info "Stopping and disabling service..."
+    
+    # Check if service is running
+    if systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
+        execute "systemctl stop $SERVICE_NAME" "Stopping $SERVICE_NAME service"
+    else
+        log_info "Service is not running"
+    fi
+    
+    # Check if service is enabled
+    if systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+        execute "systemctl disable $SERVICE_NAME" "Disabling $SERVICE_NAME service"
+    else
+        log_info "Service is not enabled"
+    fi
+    
+    log_success "Service stopped and disabled"
 }
 
 # Remove systemd service file
 remove_service_file() {
-    local service_file="/etc/systemd/system/$SERVICE_NAME.service"
+    local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
     
     if [ -f "$service_file" ]; then
-        log_info "Removing systemd service file: $service_file"
-        if [ "$DRY_RUN" -eq 0 ]; then
-            if ! sudo rm -f "$service_file"; then
-                log_error "Failed to remove service file: $service_file"
-                exit 1
-            fi
-            # Reload systemd after removing service file
-            sudo systemctl daemon-reload 2>/dev/null || true
-        fi
+        execute "rm -f $service_file" "Removing service file"
+        execute "systemctl daemon-reload" "Reloading systemd daemon"
+        log_success "Service file removed"
     else
-        log_debug "systemd service file not found: $service_file"
+        log_info "Service file not found: $service_file"
     fi
 }
 
 # Remove binary
 remove_binary() {
-    local bin_path="$PREFIX/bin/$BIN_NAME"
+    local binary_path="$PREFIX/bin/$SERVICE_NAME"
     
-    if [ -f "$bin_path" ]; then
-        log_info "Removing binary: $bin_path"
-        if [ "$DRY_RUN" -eq 0 ]; then
-            if ! sudo rm -f "$bin_path"; then
-                log_error "Failed to remove binary: $bin_path"
-                exit 1
-            fi
-        fi
+    if [ -f "$binary_path" ]; then
+        execute "rm -f $binary_path" "Removing binary"
+        log_success "Binary removed"
     else
-        log_debug "Binary not found: $bin_path"
+        log_info "Binary not found: $binary_path"
     fi
 }
 
-# Remove configuration directory
-remove_config() {
-    local config_dirs="/etc/glinrdock /etc/$SERVICE_NAME"
+# Remove or preserve data directories
+handle_data_directories() {
+    local config_dir="/etc/$SERVICE_NAME"
+    local data_dir="/var/lib/$SERVICE_NAME"
+    local log_dir="/var/log/$SERVICE_NAME"
     
-    for config_dir in $config_dirs; do
-        if [ -d "$config_dir" ]; then
-            if [ "$REMOVE_DATA" -eq 1 ]; then
-                log_info "Removing configuration directory: $config_dir"
-                if [ "$DRY_RUN" -eq 0 ]; then
-                    if ! sudo rm -rf "$config_dir"; then
-                        log_error "Failed to remove configuration directory: $config_dir"
-                        exit 1
-                    fi
-                fi
+    if [ $PURGE -eq 1 ]; then
+        # Remove all data
+        log_warning "PURGE mode: All data and configuration will be removed"
+        
+        if [ $NON_INTERACTIVE -eq 0 ] && [ $DRY_RUN -eq 0 ]; then
+            if ! confirm_action "This will permanently delete all GlinrDock data. Continue?"; then
+                log_info "Data preservation cancelled"
+                return
+            fi
+        fi
+        
+        for dir in "$config_dir" "$data_dir" "$log_dir"; do
+            if [ -d "$dir" ]; then
+                execute "rm -rf $dir" "Removing directory: $dir"
             else
-                log_warn "Configuration directory exists: $config_dir"
-                log_warn "Use --remove-data to remove it"
+                log_info "Directory not found: $dir"
+            fi
+        done
+        
+        log_success "All data directories removed"
+        
+    else
+        # Preserve data, show what's being kept
+        log_info "Data preservation mode: Keeping user data and configuration"
+        
+        local preserved_dirs=""
+        for dir in "$config_dir" "$data_dir"; do
+            if [ -d "$dir" ]; then
+                preserved_dirs="$preserved_dirs\n  - $dir"
+            fi
+        done
+        
+        if [ $KEEP_LOGS -eq 1 ]; then
+            if [ -d "$log_dir" ]; then
+                preserved_dirs="$preserved_dirs\n  - $log_dir"
             fi
         else
-            log_debug "Configuration directory not found: $config_dir"
+            # Remove logs if requested
+            if [ -d "$log_dir" ]; then
+                execute "rm -rf $log_dir" "Removing log directory: $log_dir"
+            fi
         fi
-    done
+        
+        if [ -n "$preserved_dirs" ]; then
+            log_info "Preserved directories:$preserved_dirs"
+            log_info ""
+            log_info "To remove preserved data later, run:"
+            log_info "  sudo rm -rf $config_dir $data_dir"
+            if [ $KEEP_LOGS -eq 1 ] && [ -d "$log_dir" ]; then
+                log_info "  sudo rm -rf $log_dir"
+            fi
+            log_info ""
+            log_info "Or use: sudo ./uninstall.sh --purge"
+        fi
+    fi
 }
 
-# Remove user and group (if they exist and have no other purpose)
+# Remove system user
 remove_user() {
-    local username="glinrdock"
+    if [ $PURGE -eq 0 ]; then
+        log_info "Keeping system user: $SERVICE_USER (use --purge to remove)"
+        return
+    fi
     
-    if id "$username" >/dev/null 2>&1; then
-        if [ "$REMOVE_DATA" -eq 1 ]; then
-            log_info "Removing system user: $username"
-            if [ "$DRY_RUN" -eq 0 ]; then
-                if command -v userdel >/dev/null 2>&1; then
-                    sudo userdel "$username" 2>/dev/null || log_warn "Could not remove user $username"
-                fi
-                if command -v groupdel >/dev/null 2>&1; then
-                    sudo groupdel "$username" 2>/dev/null || log_warn "Could not remove group $username"
-                fi
-            fi
-        else
-            log_warn "System user exists: $username"
-            log_warn "Use --remove-data to remove it"
+    if id "$SERVICE_USER" >/dev/null 2>&1; then
+        execute "userdel $SERVICE_USER" "Removing system user: $SERVICE_USER"
+        log_success "System user removed"
+    else
+        log_info "System user not found: $SERVICE_USER"
+    fi
+}
+
+# Clean up package manager files (if any)
+cleanup_package_files() {
+    # Check for any package manager installed files
+    local rpm_installed=0
+    local deb_installed=0
+    
+    # Check RPM installation
+    if command -v rpm >/dev/null 2>&1; then
+        if rpm -q "$SERVICE_NAME" >/dev/null 2>&1; then
+            rpm_installed=1
+        fi
+    fi
+    
+    # Check DEB installation
+    if command -v dpkg >/dev/null 2>&1; then
+        if dpkg -l "$SERVICE_NAME" >/dev/null 2>&1; then
+            deb_installed=1
+        fi
+    fi
+    
+    if [ $rpm_installed -eq 1 ] || [ $deb_installed -eq 1 ]; then
+        log_warning "Package manager installation detected"
+        log_warning "Consider using your package manager to uninstall:"
+        
+        if [ $rpm_installed -eq 1 ]; then
+            log_warning "  sudo rpm -e $SERVICE_NAME"
+        fi
+        
+        if [ $deb_installed -eq 1 ]; then
+            log_warning "  sudo dpkg -r $SERVICE_NAME"
+        fi
+    fi
+}
+
+# Verify uninstallation
+verify_removal() {
+    log_info "Verifying uninstallation..."
+    
+    local binary_path="$PREFIX/bin/$SERVICE_NAME"
+    local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
+    local remaining_files=0
+    
+    # Check binary
+    if [ -f "$binary_path" ]; then
+        log_warning "Binary still exists: $binary_path"
+        remaining_files=1
+    fi
+    
+    # Check service file
+    if [ -f "$service_file" ]; then
+        log_warning "Service file still exists: $service_file"
+        remaining_files=1
+    fi
+    
+    # Check service status
+    if systemctl list-unit-files | grep -q "^${SERVICE_NAME}.service"; then
+        log_warning "Service still registered with systemd"
+        remaining_files=1
+    fi
+    
+    if [ $remaining_files -eq 0 ]; then
+        log_success "Uninstallation verification passed"
+    else
+        log_warning "Some files may still remain"
+    fi
+}
+
+# Print uninstallation summary
+print_summary() {
+    cat << EOF
+
+${GREEN}GlinrDock Uninstallation Summary${NC}
+
+Removed:
+  - Binary: $PREFIX/bin/$SERVICE_NAME
+  - Service: /etc/systemd/system/${SERVICE_NAME}.service
+  - systemd registration
+
+EOF
+
+    if [ $PURGE -eq 1 ]; then
+        cat << EOF
+  - Configuration: /etc/$SERVICE_NAME
+  - Data directory: /var/lib/$SERVICE_NAME
+  - System user: $SERVICE_USER
+EOF
+        if [ $KEEP_LOGS -eq 0 ]; then
+            echo "  - Log directory: /var/log/$SERVICE_NAME"
         fi
     else
-        log_debug "System user not found: $username"
+        cat << EOF
+Preserved (use --purge to remove):
+  - Configuration: /etc/$SERVICE_NAME
+  - Data directory: /var/lib/$SERVICE_NAME
+  - System user: $SERVICE_USER
+EOF
+        if [ $KEEP_LOGS -eq 1 ]; then
+            echo "  - Log directory: /var/log/$SERVICE_NAME"
+        fi
+    fi
+
+    cat << EOF
+
+Manual cleanup (if needed):
+  - Remove from docker group: sudo gpasswd -d $SERVICE_USER docker
+  - Clean docker resources: docker system prune
+  - Remove firewall rules for port 8080
+
+EOF
+
+    if [ $DRY_RUN -eq 1 ]; then
+        cat << EOF
+${YELLOW}This was a dry run. No changes were made.${NC}
+Run without --dry-run to perform the actual uninstallation.
+
+EOF
     fi
 }
 
-# Remove data directories
-remove_data() {
-    local data_dirs="/var/lib/glinrdock /var/lib/$SERVICE_NAME /opt/glinrdock"
-    
-    for data_dir in $data_dirs; do
-        if [ -d "$data_dir" ]; then
-            if [ "$REMOVE_DATA" -eq 1 ]; then
-                log_info "Removing data directory: $data_dir"
-                if [ "$DRY_RUN" -eq 0 ]; then
-                    if ! sudo rm -rf "$data_dir"; then
-                        log_error "Failed to remove data directory: $data_dir"
-                        exit 1
-                    fi
-                fi
-            else
-                log_warn "Data directory exists: $data_dir"
-                log_warn "Use --remove-data to remove it"
-            fi
-        else
-            log_debug "Data directory not found: $data_dir"
-        fi
-    done
-}
-
-# Remove log files
-remove_logs() {
-    local log_dirs="/var/log/glinrdock /var/log/$SERVICE_NAME"
-    
-    for log_dir in $log_dirs; do
-        if [ -d "$log_dir" ]; then
-            if [ "$REMOVE_LOGS" -eq 1 ]; then
-                log_info "Removing log directory: $log_dir"
-                if [ "$DRY_RUN" -eq 0 ]; then
-                    if ! sudo rm -rf "$log_dir"; then
-                        log_error "Failed to remove log directory: $log_dir"
-                        exit 1
-                    fi
-                fi
-            else
-                log_warn "Log directory exists: $log_dir"
-                log_warn "Use --remove-logs to remove it"
-            fi
-        else
-            log_debug "Log directory not found: $log_dir"
-        fi
-    done
-}
-
-# Check if we have necessary permissions
-check_permissions() {
-    local bin_path="$PREFIX/bin/$BIN_NAME"
-    local need_sudo=0
-    
-    # Check if binary exists and if we need sudo to remove it
-    if [ -f "$bin_path" ] && [ ! -w "$bin_path" ]; then
-        need_sudo=1
-    fi
-    
-    # Check systemd service files
-    if service_exists; then
-        need_sudo=1
-    fi
-    
-    # Check other directories that might need sudo
-    local check_dirs="/etc/glinrdock /var/lib/glinrdock /var/log/glinrdock"
-    for dir in $check_dirs; do
-        if [ -d "$dir" ] && [ ! -w "$dir" ]; then
-            need_sudo=1
-            break
-        fi
-    done
-    
-    if [ "$need_sudo" -eq 1 ]; then
-        if ! sudo -n true 2>/dev/null; then
-            log_info "This uninstaller requires sudo privileges for some operations"
-            log_info "You may be prompted for your password"
-        fi
-    fi
-}
-
-# Main uninstall function
+# Main uninstallation function
 main() {
-    # Override prefix from environment if set
-    if [ -n "${GLINR_DESTDIR:-}" ]; then
-        PREFIX="$GLINR_DESTDIR"
-    fi
+    log_info "Starting GlinrDock uninstallation..."
     
-    # Parse arguments
     parse_args "$@"
     
-    log_info "GlinrDock Uninstaller"
-    log_info "Configuration:"
-    log_info "  Binary name: $BIN_NAME"
-    log_info "  Install prefix: $PREFIX"
-    log_info "  Dry run: $([ "$DRY_RUN" -eq 1 ] && echo "Yes" || echo "No")"
-    log_info "  Force removal: $([ "$FORCE" -eq 1 ] && echo "Yes" || echo "No")"
-    log_info "  Remove data: $([ "$REMOVE_DATA" -eq 1 ] && echo "Yes" || echo "No")"
-    log_info "  Remove logs: $([ "$REMOVE_LOGS" -eq 1 ] && echo "Yes" || echo "No")"
-    echo
-    
-    # Check permissions early
-    if [ "$DRY_RUN" -eq 0 ]; then
-        check_permissions
+    if [ $DRY_RUN -eq 1 ]; then
+        log_info "DRY RUN MODE: No changes will be made"
     fi
     
-    # Perform uninstall steps
-    log_info "Starting uninstall process..."
-    
-    # 1. Stop and disable service
+    check_root
+    check_installation
+    cleanup_package_files
     stop_service
-    
-    # 2. Remove service file
     remove_service_file
-    
-    # 3. Remove binary
     remove_binary
-    
-    # 4. Remove configuration (if requested)
-    remove_config
-    
-    # 5. Remove user (if requested)
+    handle_data_directories
     remove_user
     
-    # 6. Remove data directories (if requested)
-    remove_data
+    if [ $DRY_RUN -eq 0 ]; then
+        verify_removal
+    fi
     
-    # 7. Remove log files (if requested)
-    remove_logs
+    print_summary
     
-    echo
-    if [ "$DRY_RUN" -eq 1 ]; then
-        log_success "Dry run completed - no files were actually removed"
-        log_info "Run without --dry-run to perform the actual uninstall"
+    if [ $DRY_RUN -eq 0 ]; then
+        log_success "Uninstallation completed successfully!"
     else
-        log_success "GlinrDock has been successfully uninstalled"
-        
-        if [ "$REMOVE_DATA" -eq 0 ] || [ "$REMOVE_LOGS" -eq 0 ]; then
-            echo
-            log_info "Note: Some files may remain on your system:"
-            if [ "$REMOVE_DATA" -eq 0 ]; then
-                log_info "  - Configuration and data directories (use --remove-data to clean)"
-            fi
-            if [ "$REMOVE_LOGS" -eq 0 ]; then
-                log_info "  - Log files (use --remove-logs to clean)"
-            fi
-        fi
+        log_info "Dry run completed successfully!"
     fi
 }
 
-# Run main function with all arguments
-main "$@"
+# Run main function if script is executed directly
+if [ "${0##*/}" = "uninstall.sh" ]; then
+    main "$@"
+fi

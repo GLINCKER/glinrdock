@@ -1,0 +1,44 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - chore
+      - documentation
+      - docs
+      - refactor
+      - dependencies
+    authors:
+      - dependabot
+  categories:
+    - title: "🚀 Added"
+      labels:
+        - feature
+        - enhancement
+        - added
+    - title: "🔧 Changed"
+      labels:
+        - breaking-change
+        - changed
+        - updated
+        - improved
+    - title: "🐛 Fixed"
+      labels:
+        - bug
+        - bugfix
+        - fix
+        - fixed
+        - hotfix
+    - title: "🔒 Security"
+      labels:
+        - security
+        - vulnerability
+        - cve
+    - title: "📦 Dependencies"
+      labels:
+        - dependencies
+        - dependency-update
+    - title: "🧹 Maintenance"
+      labels:
+        - maintenance
+        - cleanup
+        - internal

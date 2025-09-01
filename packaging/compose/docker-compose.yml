@@ -1,0 +1,141 @@
+# GlinrDock Docker Compose Configuration
+# Copyright (c) 2025 GLINCKER LLC
+# Licensed under MIT License (see LICENSE-SCRIPTS)
+
+services:
+  glinrdock:
+    image: ghcr.io/glincker/glinrdock:${TAG:-latest}
+    container_name: glinrdock_controller
+    restart: unless-stopped
+    
+    # Security hardening
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    user: "65532:65532"  # nonroot user from distroless
+    
+    # Network configuration
+    ports:
+      - "${GLINRDOCK_HTTP_PORT:-8080}:8080"
+    
+    # Environment configuration
+    environment:
+      GLINRDOCK_HTTP_ADDR: ":8080"
+      GLINRDOCK_DATA_DIR: "/data"
+      GLINRDOCK_LOG_LEVEL: "${GLINRDOCK_LOG_LEVEL:-info}"
+      GLINRDOCK_LOG_FORMAT: "${GLINRDOCK_LOG_FORMAT:-json}"
+      ADMIN_TOKEN: "${ADMIN_TOKEN:-change-this-secure-token-now}"
+    
+    # Volume mounts
+    volumes:
+      # Persistent data storage
+      - ./data:/data
+      
+      # Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
+      # Configuration directory
+      - ./config:/etc/glinrdock:ro
+      
+      # Temporary filesystem for runtime files
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          size: 100M
+          mode: 1777
+    
+    # Health check
+    healthcheck:
+      test: ["/usr/local/bin/glinrdockd", "healthcheck", "--endpoint", "http://localhost:8080/v1/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 128M
+          cpus: '0.25'
+    
+    # Logging configuration
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service,version"
+    
+    # Labels for service discovery
+    labels:
+      - "com.glinr.service=glinrdock"
+      - "com.glinr.component=controller"
+      - "com.glinr.version=${TAG:-latest}"
+    
+    networks:
+      - glinrdock
+
+  # Optional: Nginx reverse proxy (commented example)
+  # nginx:
+  #   image: nginx:1.25-alpine
+  #   container_name: glinrdock_nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #     - nginx_logs:/var/log/nginx
+  #   depends_on:
+  #     - glinrdock
+  #   networks:
+  #     - glinrdock
+
+volumes:
+  # GlinrDock volumes
+  glinrdock_data:
+    driver: local
+  glinrdock_logs:
+    driver: local
+  
+  # Optional: Nginx volumes (uncomment if using nginx)
+  # nginx_logs:
+  #   driver: local
+
+networks:
+  glinrdock:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+# Configuration examples:
+# 1. Basic deployment:
+#    docker compose up -d
+#
+# 2. With custom environment:
+#    TAG=v1.0.0 ADMIN_TOKEN=secure-token docker compose up -d
+#
+# 3. Development mode with logs:
+#    docker compose up --no-daemon
+#
+# Environment variables:
+# - TAG: Image tag (default: latest)
+# - GLINRDOCK_HTTP_PORT: HTTP port (default: 8080)  
+# - GLINRDOCK_LOG_LEVEL: Log level (default: info)
+# - GLINRDOCK_LOG_FORMAT: Log format (default: json)
+# - ADMIN_TOKEN: Admin authentication token (REQUIRED)
+#
+# Example .env file:
+# TAG=v1.0.0
+# ADMIN_TOKEN=your-super-secure-admin-token-change-this
+# GLINRDOCK_HTTP_PORT=8080
+# GLINRDOCK_LOG_LEVEL=info

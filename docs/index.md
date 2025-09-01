@@ -1,53 +1,116 @@
 # GlinrDock Documentation
 
-**Container management platform - binary distribution and installation guide**
+> **🚧 COMING SOON** - Currently in development. Star this repo to get notified when we launch!
 
-GlinrDock is a lightweight, secure container management platform designed for production environments. This documentation covers installation, configuration, and operation of the binary distribution.
+**Lightweight, Secure Container Management Platform**
 
-## Overview
+GlinrDock is a modern container management platform designed for simplicity, security, and performance. Built for developers and DevOps teams who need reliable container orchestration without the complexity of heavyweight solutions.
 
-GlinrDock provides:
-- Web-based container management interface
-- REST API for programmatic control
-- Multi-architecture binary support
-- Secure default configuration
-- Minimal resource footprint
+## Key Features
 
-## Quick Install
+- **Lightweight Architecture** - Minimal resource footprint with maximum performance
+- **Enterprise Security** - Built-in security hardening and compliance features  
+- **Developer Friendly** - Intuitive web interface and comprehensive API
+- **Easy Deployment** - Simple installation on Linux, Docker, or Kubernetes
+- **Multi-Architecture** - Native support for AMD64 and ARM64 platforms
 
-### Linux with systemd (Recommended)
-```bash
-curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
-```
+## Quick Navigation
 
-### Docker Compose
-```bash
-curl -fsSL https://raw.githubusercontent.com/GLINCKER/glinrdock-release/main/deploy/docker-compose.yml -o docker-compose.yml
-docker-compose up -d
-```
+<div class="grid cards" markdown>
 
-### Manual Installation
-```bash
-# Download binary for your platform
-curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/glinrdockd_linux_amd64.tar.gz
+-   :material-rocket-launch:{ .lg .middle } **Quick Start**
+    
+    ---
+    
+    Get GlinrDock running in minutes with our streamlined setup guide.
+    
+    [:octicons-arrow-right-24: Quick Start](QUICKSTART.md)
 
-# Verify checksum
-curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/glinrdockd_linux_amd64.tar.gz.sha256
-sha256sum -c glinrdockd_linux_amd64.tar.gz.sha256
+-   :material-linux:{ .lg .middle } **Linux Installation**
+    
+    ---
+    
+    Complete installation guide for Linux systems using various methods.
+    
+    [:octicons-arrow-right-24: Linux Install](INSTALL_LINUX.md)
 
-# Extract and install
-tar -xzf glinrdockd_linux_amd64.tar.gz
-sudo cp glinrdockd_linux_amd64 /usr/local/bin/glinrdockd
-sudo chmod +x /usr/local/bin/glinrdockd
+-   :material-docker:{ .lg .middle } **Docker Installation**
+    
+    ---
+    
+    Run GlinrDock using Docker containers for easy deployment.
+    
+    [:octicons-arrow-right-24: Docker Install](INSTALL_DOCKER.md)
+
+-   :material-shield-check:{ .lg .middle } **Security Guide**
+    
+    ---
+    
+    Learn about security best practices and hardening options.
+    
+    [:octicons-arrow-right-24: Security](SECURITY.md)
+
+</div>
+
+## Installation Methods
+
+=== "Linux (Recommended)"
+
+    ```bash
+    curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/latest/download/install.sh | sudo bash
+    ```
+
+=== "Docker Compose"
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/GLINCKER/glinrdock-release/main/packaging/compose/docker-compose.yml -o docker-compose.yml
+    echo "ADMIN_TOKEN=$(openssl rand -hex 32)" > .env
+    docker compose up -d
+    ```
+
+=== "Manual Binary"
+
+    ```bash
+    # Download and verify
+    curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/glinrdockd_linux_amd64.tar.gz
+    curl -LO https://github.com/GLINCKER/glinrdock-release/releases/latest/download/SHA256SUMS
+    sha256sum -c SHA256SUMS --ignore-missing
+    
+    # Install
+    tar -xzf glinrdockd_linux_amd64.tar.gz
+    sudo cp glinrdockd_linux_amd64 /usr/local/bin/glinrdockd
+    sudo chmod +x /usr/local/bin/glinrdockd
+    ```
+
+## Architecture Overview
+
+GlinrDock follows a clean, modular architecture designed for reliability and maintainability:
+
+```mermaid
+graph TB
+    A[Web Interface] --> B[API Gateway]
+    B --> C[Controller Core]
+    C --> D[Docker Engine]
+    C --> E[Data Store]
+    C --> F[Security Layer]
+    
+    G[CLI Client] --> B
+    H[External API] --> B
+    
+    style C fill:#e1f5fe
+    style F fill:#fff3e0
+    style D fill:#f3e5f5
 ```
 
 ## First Steps
 
-After installation:
-1. Access the dashboard at http://localhost:8080
-2. Locate your admin token in the installation output or configuration file
-3. Log in with the admin token
-4. Create your first container project
+!!! tip "Quick Start"
+    After installation, access the dashboard at **http://localhost:8080** and use your admin token to log in.
+
+1. **Access the Interface** - Open http://localhost:8080 in your browser
+2. **Get Admin Token** - Find the token in installation output or config file  
+3. **Log In** - Use the admin token to authenticate
+4. **Create Project** - Start managing containers with your first project
 
 ## System Requirements
 
