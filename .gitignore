@@ -34,7 +34,7 @@ coverage/
 ehthumbs.db
 Thumbs.db
 
-# Binary artifacts (keep in _staging but ignore elsewhere)
+# Binary artifacts - NEVER commit large binaries 
 *.tar.gz
 *.zip
 *.dmg
@@ -42,6 +42,12 @@ Thumbs.db
 *.rpm
 glinrdockd
 glinrdockd_*
+
+# Staging directory binaries (too large for git)
+_staging/**/glinrdockd
+_staging/**/glinrdockd_*
+_staging/**/*.tar.gz
+_staging/**/*.zip
 
 # Temporary files
 tmp/
@@ -77,12 +83,8 @@ coverage/
 # Documentation build
 site/
 
-# Keep staging directory but ignore its contents in other locations
+# Keep staging directory structure and checksums only
 !_staging/
-/_staging/**/*.tar.gz
-/_staging/**/*.zip
-/_staging/**/glinrdockd
-/_staging/**/glinrdockd_*
 !_staging/**/SHA256SUMS
 !_staging/**/*.sha256
 !_staging/**/*.sbom.spdx.json
