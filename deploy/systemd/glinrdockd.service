@@ -1,0 +1,119 @@
+[Unit]
+Description=GlinrDock Container Management Service
+Documentation=https://github.com/GLINCKER/glinrdock-release
+After=network.target docker.service
+Wants=docker.service
+# Start after Docker to ensure socket is available
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=exec
+User=glinrdock
+Group=glinrdock
+
+# Core service configuration
+ExecStart=/usr/local/bin/glinrdockd --http-addr :8080
+Restart=always
+RestartSec=3
+TimeoutStartSec=30
+TimeoutStopSec=15
+
+# Environment configuration
+EnvironmentFile=-/etc/default/glinrdockd
+Environment=GLINRDOCK_DATA_DIR=/var/lib/glinrdock/data
+Environment=GLINRDOCK_LOG_LEVEL=info
+
+# Working directory and state
+WorkingDirectory=/var/lib/glinrdock
+StateDirectory=glinrdock
+StateDirectoryMode=0750
+ConfigurationDirectory=glinrdock
+ConfigurationDirectoryMode=0750
+LogsDirectory=glinrdock
+LogsDirectoryMode=0750
+
+# Security hardening - Core restrictions
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=full
+ReadOnlyPaths=/
+
+# Security hardening - Process isolation
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+
+# Security hardening - Capability restrictions
+CapabilityBoundingSet=
+AmbientCapabilities=
+RemoveIPC=yes
+
+# Security hardening - System call restrictions
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete
+
+# Security hardening - Network restrictions
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+IPAddressDeny=any
+IPAddressAllow=localhost
+IPAddressAllow=10.0.0.0/8
+IPAddressAllow=172.16.0.0/12
+IPAddressAllow=192.168.0.0/16
+
+# Security hardening - Filesystem restrictions
+ProtectProc=invisible
+ProcSubset=pid
+PrivateUsers=yes
+DynamicUser=no
+
+# Security hardening - Memory restrictions
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+
+# Docker socket access - Required for container management
+# Note: This creates a controlled exception to some hardening rules
+SupplementaryGroups=docker
+ReadWritePaths=/var/run/docker.sock
+ReadWritePaths=/var/lib/glinrdock
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+TasksMax=4096
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=glinrdockd
+
+[Install]
+WantedBy=multi-user.target
+
+# Security notes:
+# 1. User=glinrdock runs as non-root system user
+# 2. NoNewPrivileges prevents privilege escalation
+# 3. ProtectSystem=full makes most of filesystem read-only
+# 4. PrivateTmp provides isolated /tmp directory
+# 5. PrivateDevices hides physical devices
+# 6. SystemCallFilter blocks dangerous system calls
+# 7. CapabilityBoundingSet removes all capabilities
+# 8. RestrictAddressFamilies limits network protocols
+# 9. ReadOnlyPaths=/ makes entire filesystem read-only by default
+# 10. Docker socket access is explicitly granted for container management
+#
+# Trade-offs:
+# - Docker socket access requires some relaxation of filesystem restrictions
+# - Container management requires network access for registry operations
+# - Log directories need write access for application logging
+#
+# To verify security configuration:
+# systemd-analyze verify /etc/systemd/system/glinrdockd.service
+# systemd-analyze security glinrdockd.service

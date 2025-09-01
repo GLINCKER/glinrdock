@@ -1,0 +1,27 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Explicitly declare text files you want to always be normalized and converted
+# to native line endings on checkout.
+*.md text
+*.txt text
+*.json text
+*.yml text
+*.yaml text
+*.sh text
+*.go text
+Dockerfile text
+Makefile text
+
+# Declare files that will always have LF line endings on checkout.
+*.sh text eol=lf
+
+# Binary files
+*.tar.gz binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

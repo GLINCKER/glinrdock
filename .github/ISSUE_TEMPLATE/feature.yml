@@ -1,0 +1,171 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for GlinrDock
+title: "[FEATURE] "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a feature! Please provide detailed information about your request.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-flight checklist
+      description: Please verify you've completed these steps
+      options:
+        - label: I have searched existing issues and this feature hasn't been requested
+          required: true
+        - label: I have checked the roadmap for planned features
+          required: true
+        - label: This is a single, well-defined feature request
+          required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A brief, clear summary of the feature you'd like to see
+      placeholder: Summarize the feature request in 1-2 sentences...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What's the motivation?
+      placeholder: |
+        Is your feature request related to a problem? Please describe.
+        Example: "I'm always frustrated when..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented
+      placeholder: |
+        Describe your proposed solution:
+        - How should it work?
+        - What should the user experience be?
+        - Any specific implementation details?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: |
+        Describe alternatives you've considered:
+        - Other ways to solve this problem
+        - Existing workarounds
+        - Why the proposed solution is better
+    validations:
+      required: false
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Feature Category
+      description: What type of feature is this?
+      options:
+        - API Enhancement
+        - UI/UX Improvement
+        - Security Feature
+        - Performance Optimization
+        - Integration/Plugin
+        - Monitoring/Observability
+        - Container Management
+        - Project Management
+        - Documentation
+        - Other (specify in additional context)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Nice to have (would be useful)
+        - Important (would significantly improve workflow)
+        - Critical (blocking current work)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: complexity
+    attributes:
+      label: Estimated Complexity
+      description: How complex do you think this feature would be to implement?
+      options:
+        - Simple (minor change, quick to implement)
+        - Medium (moderate effort, some design needed)
+        - Complex (significant effort, major changes)
+        - Unknown (not sure about implementation complexity)
+    validations:
+      required: false
+
+  - type: textarea
+    id: use_cases
+    attributes:
+      label: Use Cases
+      description: Provide specific use cases or scenarios where this feature would be beneficial
+      placeholder: |
+        Example use cases:
+        1. As a DevOps engineer, I want to... so that...
+        2. When managing multiple projects, I need to... because...
+        3. During deployment, it would be helpful to... to avoid...
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups/Examples
+      description: |
+        If applicable, provide mockups, wireframes, or examples:
+        - UI mockups or sketches
+        - API endpoint examples
+        - Configuration examples
+        - Screenshots from other tools
+      placeholder: |
+        You can attach images by dragging and dropping them here.
+        For API examples, use code blocks:
+        ```json
+        {
+          "example": "api_response"
+        }
+        ```
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: |
+        Any other information that would be helpful:
+        - Links to similar features in other tools
+        - Technical constraints to consider
+        - Compatibility requirements
+        - Performance considerations
+      placeholder: Any additional information...
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Are you interested in contributing to this feature?
+      options:
+        - label: I would be willing to contribute to implementing this feature
+          required: false
+        - label: I would be available to help test this feature
+          required: false
+        - label: I would be willing to help with documentation
+          required: false

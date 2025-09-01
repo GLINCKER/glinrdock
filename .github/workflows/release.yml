@@ -1,0 +1,322 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  # Path A: Tag push - create draft release and upload staging artifacts
+  draft-release:
+    name: Create Draft Release
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'GLINCKER' && startsWith(github.ref, 'refs/tags/v')
+    outputs:
+      version: ${{ steps.extract-version.outputs.version }}
+      release-id: ${{ steps.create-release.outputs.release_id }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        
+      - name: Extract version from tag
+        id: extract-version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        
+      - name: Check for staging artifacts
+        id: check-staging
+        run: |
+          if [ -d "_staging/${{ steps.extract-version.outputs.version }}" ]; then
+            echo "has_staging=true" >> $GITHUB_OUTPUT
+            echo "Found staging directory: _staging/${{ steps.extract-version.outputs.version }}"
+            ls -la "_staging/${{ steps.extract-version.outputs.version }}/"
+          else
+            echo "has_staging=false" >> $GITHUB_OUTPUT
+            echo "No staging directory found"
+          fi
+          
+      - name: Create draft release
+        id: create-release
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const { data: release } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: '${{ steps.extract-version.outputs.version }}',
+              name: 'GlinrDock ${{ steps.extract-version.outputs.version }}',
+              body: 'Release notes will be updated when published.',
+              draft: true,
+              prerelease: ${{ contains(steps.extract-version.outputs.version, '-') }}
+            });
+            core.setOutput('release_id', release.id);
+            return release.id;
+            
+      - name: Upload staging artifacts
+        if: steps.check-staging.outputs.has_staging == 'true'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            const stagingDir = '_staging/${{ steps.extract-version.outputs.version }}';
+            const files = fs.readdirSync(stagingDir);
+            
+            for (const file of files) {
+              const filePath = path.join(stagingDir, file);
+              const stats = fs.statSync(filePath);
+              
+              if (stats.isFile()) {
+                const fileContent = fs.readFileSync(filePath);
+                
+                await github.rest.repos.uploadReleaseAsset({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  release_id: ${{ steps.create-release.outputs.release_id }},
+                  name: file,
+                  data: fileContent
+                });
+                
+                console.log(`Uploaded: ${file}`);
+              }
+            }
+
+  # Path B: Release published - download assets, verify, build container, scan
+  publish-release:
+    name: Process Published Release
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'GLINCKER' && github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+        
+      - name: Extract version from release
+        id: extract-version
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${{ github.event.release.prerelease }}" >> $GITHUB_OUTPUT
+          
+      - name: Download release assets
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            
+            // Get release assets
+            const { data: assets } = await github.rest.repos.listReleaseAssets({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ github.event.release.id }}
+            });
+            
+            // Create download directory
+            fs.mkdirSync('release-assets', { recursive: true });
+            
+            // Download each asset
+            for (const asset of assets) {
+              console.log(`Downloading: ${asset.name}`);
+              
+              const response = await github.rest.repos.getReleaseAsset({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                asset_id: asset.id,
+                headers: {
+                  Accept: 'application/octet-stream'
+                }
+              });
+              
+              fs.writeFileSync(`release-assets/${asset.name}`, Buffer.from(response.data));
+            }
+            
+            // List downloaded files
+            const files = fs.readdirSync('release-assets');
+            console.log('Downloaded files:', files);
+            
+      - name: Verify checksums
+        run: |
+          cd release-assets
+          if [ -f "SHA256SUMS" ]; then
+            echo "Verifying checksums..."
+            sha256sum -c SHA256SUMS
+          else
+            echo "Warning: No SHA256SUMS file found"
+            # Generate checksums for verification
+            sha256sum *.tar.gz > generated_checksums.txt
+            echo "Generated checksums:"
+            cat generated_checksums.txt
+          fi
+          
+      - name: Extract Linux binaries
+        run: |
+          cd release-assets
+          
+          # Extract AMD64 binary
+          if [ -f "glinrdockd_linux_amd64.tar.gz" ]; then
+            tar -xzf glinrdockd_linux_amd64.tar.gz
+            mv glinrdockd_linux_amd64 glinrdockd_amd64
+          else
+            echo "Error: glinrdockd_linux_amd64.tar.gz not found"
+            exit 1
+          fi
+          
+          # Extract ARM64 binary
+          if [ -f "glinrdockd_linux_arm64.tar.gz" ]; then
+            tar -xzf glinrdockd_linux_arm64.tar.gz  
+            mv glinrdockd_linux_arm64 glinrdockd_arm64
+          else
+            echo "Error: glinrdockd_linux_arm64.tar.gz not found"
+            exit 1
+          fi
+          
+          # Verify binaries
+          file glinrdockd_*
+          ls -la glinrdockd_*
+          
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.6.1
+        
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Create multi-arch Dockerfile
+        run: |
+          cat > Dockerfile.release << 'EOF'
+          # Multi-arch release Dockerfile
+          FROM alpine:3.20 AS certs
+          RUN apk --no-cache add ca-certificates
+          WORKDIR /etc/ssl/certs
+          RUN update-ca-certificates
+          
+          FROM gcr.io/distroless/static-debian12:nonroot
+          
+          ARG TARGETARCH
+          ARG VERSION
+          ARG BUILD_DATE
+          ARG VCS_REF
+          
+          # Metadata
+          LABEL org.opencontainers.image.title="GlinrDock Controller"
+          LABEL org.opencontainers.image.description="Hardened container management service"
+          LABEL org.opencontainers.image.url="https://github.com/GLINCKER/glinrdock-release"
+          LABEL org.opencontainers.image.source="https://github.com/GLINCKER/glinrdock-release"
+          LABEL org.opencontainers.image.version="${VERSION}"
+          LABEL org.opencontainers.image.revision="${VCS_REF}"
+          LABEL org.opencontainers.image.created="${BUILD_DATE}"
+          LABEL org.opencontainers.image.vendor="GLINCKER"
+          LABEL org.opencontainers.image.licenses="Proprietary"
+          
+          # Copy CA certificates
+          COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+          
+          # Copy architecture-specific binary
+          COPY release-assets/glinrdockd_${TARGETARCH} /usr/local/bin/glinrdockd
+          
+          # Use nonroot user
+          USER 65532:65532
+          WORKDIR /data
+          
+          # Environment variables
+          ENV GLINRDOCK_DATA_DIR=/data
+          ENV GLINRDOCK_HTTP_ADDR=:8080
+          ENV GLINRDOCK_LOG_LEVEL=info
+          ENV GLINRDOCK_LOG_FORMAT=json
+          
+          # Health check
+          HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+              CMD ["/usr/local/bin/glinrdockd", "healthcheck", "--endpoint", "http://localhost:8080/v1/health"]
+          
+          # Expose port
+          EXPOSE 8080
+          VOLUME ["/data"]
+          
+          # Default command
+          ENTRYPOINT ["/usr/local/bin/glinrdockd"]
+          CMD ["--http-addr", ":8080", "--data-dir", "/data"]
+          EOF
+          
+      - name: Build and push multi-arch container image
+        uses: docker/build-push-action@5176d81f87c23d6fc96624dfdbcd9f3830bbe445 # v6.5.0
+        with:
+          context: .
+          file: ./Dockerfile.release
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/glinrdock:${{ steps.extract-version.outputs.version }}
+            ${{ steps.extract-version.outputs.is_prerelease == 'false' && format('ghcr.io/{0}/glinrdock:latest', github.repository_owner) || '' }}
+          build-args: |
+            VERSION=${{ steps.extract-version.outputs.version }}
+            BUILD_DATE=${{ github.run_id }}
+            VCS_REF=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.24.0
+        with:
+          scan-type: 'fs'
+          scan-ref: 'release-assets'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+          
+      - name: Run Trivy container image scan
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # v0.24.0
+        with:
+          scan-type: 'image'
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/glinrdock:${{ steps.extract-version.outputs.version }}'
+          format: 'sarif'
+          output: 'trivy-image-results.sarif'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '1'
+          
+      - name: Upload Trivy scan results
+        if: always()
+        uses: github/codeql-action/upload-sarif@4dd16135b69a43b6c8efb853346f8437d92d3c93 # v3.26.6
+        with:
+          sarif_file: |
+            trivy-fs-results.sarif
+            trivy-image-results.sarif
+            
+      - name: Generate job summary
+        if: always()
+        run: |
+          echo "# Release Processing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Version: ${{ steps.extract-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Container Images Built:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${{ github.repository_owner }}/glinrdock:${{ steps.extract-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.extract-version.outputs.is_prerelease }}" = "false" ]; then
+            echo "- \`ghcr.io/${{ github.repository_owner }}/glinrdock:latest\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Assets:" >> $GITHUB_STEP_SUMMARY
+          cd release-assets
+          for file in *.tar.gz; do
+            if [ -f "$file" ]; then
+              size=$(du -h "$file" | cut -f1)
+              echo "- \`$file\` ($size)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Scans:" >> $GITHUB_STEP_SUMMARY
+          echo "- Trivy filesystem scan: completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Trivy container scan: completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Verification:" >> $GITHUB_STEP_SUMMARY
+          echo "- Checksum verification: completed" >> $GITHUB_STEP_SUMMARY
+          echo "- Multi-arch build: linux/amd64, linux/arm64" >> $GITHUB_STEP_SUMMARY

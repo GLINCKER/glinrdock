@@ -1,0 +1,80 @@
+# GlinrDock Controller - Hardened Multi-stage Dockerfile
+# Build: docker build -f Dockerfile.controller --build-arg BINARY_PATH=./glinrdockd -t glinrdock:latest .
+
+# Stage 1: Certificate bundle preparation
+FROM alpine:3.20 AS certs
+RUN apk --no-cache add ca-certificates
+WORKDIR /etc/ssl/certs
+RUN update-ca-certificates
+
+# Stage 2: Final runtime image
+FROM gcr.io/distroless/static-debian12:nonroot
+
+# Build arguments
+ARG BINARY_PATH=./glinrdockd
+ARG BUILD_DATE
+ARG VERSION
+ARG VCS_REF
+
+# Metadata
+LABEL org.opencontainers.image.title="GlinrDock Controller"
+LABEL org.opencontainers.image.description="Hardened container management service"
+LABEL org.opencontainers.image.url="https://github.com/GLINCKER/glinrdock-release"
+LABEL org.opencontainers.image.source="https://github.com/GLINCKER/glinrdock-release"
+LABEL org.opencontainers.image.version="${VERSION:-development}"
+LABEL org.opencontainers.image.revision="${VCS_REF:-unknown}"
+LABEL org.opencontainers.image.created="${BUILD_DATE:-unknown}"
+LABEL org.opencontainers.image.vendor="GLINCKER"
+LABEL org.opencontainers.image.licenses="Proprietary"
+
+# Copy CA certificates for HTTPS connectivity
+COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+
+# Copy binary from build artifacts
+# Expected to be built binary, not source code
+COPY ${BINARY_PATH} /usr/local/bin/glinrdockd
+
+# Create required directories for data and configuration
+# Distroless nonroot user: uid=65532(nonroot) gid=65532(nonroot)
+USER 65532:65532
+
+# Working directory for data files
+WORKDIR /data
+
+# Default environment configuration
+ENV GLINRDOCK_DATA_DIR=/data
+ENV GLINRDOCK_HTTP_ADDR=:8080
+ENV GLINRDOCK_LOG_LEVEL=info
+ENV GLINRDOCK_LOG_FORMAT=json
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["/usr/local/bin/glinrdockd", "healthcheck", "--endpoint", "http://localhost:8080/v1/health"]
+
+# Expose HTTP port
+EXPOSE 8080
+
+# Security: Read-only root filesystem
+# Application must use /data and /tmp for writes
+VOLUME ["/data"]
+
+# Default command
+ENTRYPOINT ["/usr/local/bin/glinrdockd"]
+CMD ["--http-addr", ":8080", "--data-dir", "/data"]
+
+# Security hardening notes:
+# 1. Distroless base image - minimal attack surface, no shell/package manager
+# 2. Non-root user (65532:nonroot) - prevents privilege escalation
+# 3. Read-only root filesystem via Docker run --read-only
+# 4. Single binary execution - no additional tools or scripts
+# 5. Explicit volume for data persistence
+# 6. Health check for service monitoring
+# 7. Minimal environment variables
+# 8. CA certificates for secure outbound connections
+#
+# Usage:
+# Build: docker build -f Dockerfile.controller --build-arg BINARY_PATH=./glinrdockd_linux_amd64 -t glinrdock:latest .
+# Run:   docker run --read-only --tmpfs /tmp -p 8080:8080 -v glinrdock_data:/data glinrdock:latest
+#
+# For Docker socket access (container management):
+# docker run --read-only --tmpfs /tmp -p 8080:8080 -v glinrdock_data:/data -v /var/run/docker.sock:/var/run/docker.sock glinrdock:latest

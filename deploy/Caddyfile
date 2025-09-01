@@ -1,0 +1,78 @@
+# GlinrDock Caddy Configuration
+# Automatic HTTPS with Let's Encrypt
+
+{$DOMAIN:localhost} {
+    # Enable HSTS
+    header {
+        # Security headers
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+        
+        # HSTS (enable only after testing)
+        # Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+    
+    # Enable gzip compression
+    encode gzip
+    
+    # Reverse proxy to GlinrDock
+    reverse_proxy glinrdock:8080 {
+        # Health check
+        health_uri /health
+        health_interval 30s
+        health_timeout 10s
+        
+        # Headers for proper forwarding
+        header_up Host {upstream_hostport}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Port {server_port}
+    }
+    
+    # API rate limiting
+    rate_limit {
+        zone api {
+            key {remote_host}
+            events 100
+            window 1m
+        }
+        
+        zone webhooks {
+            key {remote_host}
+            events 30  
+            window 1m
+        }
+    }
+    
+    # Apply rate limits to API endpoints
+    @api path /v1/*
+    rate_limit @api api
+    
+    @webhooks path /webhooks/*
+    rate_limit @webhooks webhooks
+    
+    # Logging
+    log {
+        output file /data/access.log {
+            roll_size 100mb
+            roll_keep 5
+            roll_keep_for 30d
+        }
+        format json
+        level INFO
+    }
+    
+    # Optional: Basic auth for admin endpoints
+    # @admin path /v1/admin/*
+    # basicauth @admin {
+    #     admin $2a$14$hashed_password_here
+    # }
+}
+
+# Health check endpoint (internal)
+:8081 {
+    respond /health "OK" 200
+}
