@@ -1,0 +1,88 @@
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids
+*.pid
+*.seed
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# nyc test coverage
+.nyc_output
+
+# Environment variables
+.env
+.env.local
+.env.production
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Binary artifacts (keep in _staging but ignore elsewhere)
+*.tar.gz
+*.zip
+*.dmg
+*.deb
+*.rpm
+glinrdockd
+glinrdockd_*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Node modules (if any)
+node_modules/
+
+# Go build cache
+go-build/
+
+# Docker volumes
+docker-data/
+
+# Local development
+.local/
+local/
+
+# Backup files
+*.bak
+*.backup
+
+# Testing
+test-results/
+coverage/
+
+# Documentation build
+site/
+
+# Keep staging directory but ignore its contents in other locations
+!_staging/
+/_staging/**/*.tar.gz
+/_staging/**/*.zip
+/_staging/**/glinrdockd
+/_staging/**/glinrdockd_*
+!_staging/**/SHA256SUMS
+!_staging/**/*.sha256
+!_staging/**/*.sbom.spdx.json
