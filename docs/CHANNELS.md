@@ -54,7 +54,7 @@ This document outlines all communication channels available for GlinrDock users 
 
 ### Enterprise Support
 
-**Email**: contact@glinr.dev
+**Email**: support@glincker.com
 
 **Use for:**
 - Commercial support inquiries
@@ -317,7 +317,7 @@ curl -s https://api.github.com/repos/GLINCKER/glinrdock-release/releases/latest 
 | **Bug Reports** | GitHub Issues | 1-3 business days |
 | **Feature Requests** | GitHub Issues | 1-3 business days |
 | **Security Issues** | security@glinr.dev | 24 hours |
-| **Enterprise Support** | contact@glinr.dev | Varies by tier |
+| **Enterprise Support** | support@glincker.com | Varies by tier |
 | **Documentation** | Self-service | Immediate |
 | **General Questions** | GitHub Issues | 1-3 business days |
 

@@ -95,7 +95,7 @@ Use this template for GlinrDock release notes. Replace the placeholders with act
 ### New Installation
 ```bash
 # Install script (recommended)
-curl -fsSL https://github.com/GLINCKER/glinrdock/releases/download/v[VERSION]/install.sh | sudo bash
+curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/download/v[VERSION]/install.sh | sudo bash
 
 # Docker Compose
 curl -fsSL https://raw.githubusercontent.com/GLINCKER/glinrdock/v[VERSION]/deploy/docker-compose.yml -o docker-compose.yml
@@ -119,7 +119,7 @@ docker-compose up -d
 2. **Upgrade the binary/image:**
    ```bash
    # Systemd installation
-   sudo curl -fsSL https://github.com/GLINCKER/glinrdock/releases/download/v[VERSION]/glinrdockd-linux-amd64 -o /usr/local/bin/glinrdockd
+   sudo curl -fsSL https://github.com/GLINCKER/glinrdock-release/releases/download/v[VERSION]/glinrdockd-linux-amd64 -o /usr/local/bin/glinrdockd
    sudo chmod +x /usr/local/bin/glinrdockd
    sudo systemctl start glinrdock
    
@@ -218,8 +218,8 @@ Special thanks to the following contributors for this release:
 
 ### Feedback
 We value your feedback! Please:
-- Report issues on [GitHub Issues](https://github.com/GLINCKER/glinrdock/issues)
-- Join discussions on [GitHub Discussions](https://github.com/GLINCKER/glinrdock/discussions)
+- Report issues on [GitHub Issues](https://github.com/GLINCKER/glinrdock-release/issues)
+- Join discussions on [GitHub Discussions](https://github.com/GLINCKER/glinrdock-release/discussions)
 - Share your use cases and success stories
 
 ## Checksums

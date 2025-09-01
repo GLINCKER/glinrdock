@@ -5,13 +5,13 @@
 **Version 1.0**  
 **Effective Date: [DATE]**
 
-This End User License Agreement ("Agreement") is a legal agreement between you ("User" or "you") and Glinr Inc. ("Glinr", "we", "us", or "our") for the GlinrDock software application ("Software").
+This End User License Agreement ("Agreement") is a legal agreement between you ("User" or "you") and GLINCKER LLC ("GLINCKER", "we", "us", or "our") for the GlinrDock software application ("Software").
 
 By installing, copying, or otherwise using the Software, you agree to be bound by the terms of this Agreement.
 
 ## 1. License Grant
 
-Subject to the terms and conditions of this Agreement, Glinr grants you a limited, non-exclusive, non-transferable license to:
+Subject to the terms and conditions of this Agreement, GLINCKER grants you a limited, non-exclusive, non-transferable license to:
 
 ### 1.1 Personal and Development Use
 - Install and use the Software for personal projects and development purposes
@@ -19,7 +19,7 @@ Subject to the terms and conditions of this Agreement, Glinr grants you a limite
 - Use all features for non-commercial evaluation and testing
 
 ### 1.2 Commercial Use
-For commercial use beyond the limits specified in Section 1.1, you must obtain a commercial license from Glinr.
+For commercial use beyond the limits specified in Section 1.1, you must obtain a commercial license from GLINCKER.
 
 Commercial use includes:
 - Use in production environments serving customers
@@ -35,17 +35,17 @@ You may NOT:
 - **Reverse engineer**, decompile, or disassemble the Software
 - **Remove or modify** any proprietary notices or labels
 - **Create derivative works** based on the Software
-- **Use the Software** to compete with Glinr's services
+- **Use the Software** to compete with GLINCKER's services
 - **Sublicense, rent, lease**, or lend the Software to third parties
 
 ## 3. Intellectual Property
 
-The Software and all intellectual property rights therein are and shall remain the exclusive property of Glinr. This Agreement does not grant you any ownership rights in the Software.
+The Software and all intellectual property rights therein are and shall remain the exclusive property of GLINCKER. This Agreement does not grant you any ownership rights in the Software.
 
 ## 4. Data and Privacy
 
 ### 4.1 Data Collection
-The Software may collect anonymous usage statistics and error reports to improve functionality. No personal data or container contents are transmitted to Glinr servers.
+The Software may collect anonymous usage statistics and error reports to improve functionality. No personal data or container contents are transmitted to GLINCKER servers.
 
 ### 4.2 User Data
 All container data, configurations, and deployments remain under your complete control and are stored locally on your systems.
@@ -112,9 +112,11 @@ If any provision is found unenforceable, the remainder of the Agreement shall re
 
 ## 11. Contact Information
 
-**Glinr Inc.**  
-Email: legal@glinr.dev  
-Website: https://glinr.dev
+**GLINCKER LLC**  
+Email: legal@glincker.com  
+Website: https://glincker.com
+
+Contact us at: licensing@glincker.com
 
 ---
 

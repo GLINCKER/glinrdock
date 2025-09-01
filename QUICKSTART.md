@@ -256,10 +256,10 @@ sudo ufw allow from 192.168.0.0/16 to any port 8080
 - **Backup & Restore** - Automated data protection
 
 ### Get Help
-- **Issues:** [GitHub Issues](https://github.com/GLINCKER/glinrdock/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/GLINCKER/glinrdock/discussions)
+- **Issues:** [GitHub Issues](https://github.com/GLINCKER/glinrdock-release/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/GLINCKER/glinrdock-release/discussions)
 - **Security:** [Security Policy](./SECURITY.md)
-- **Enterprise:** contact@glinr.dev
+- **Enterprise:** support@glincker.com
 
 ## You're Ready!
 

@@ -86,7 +86,7 @@ See [Security Policy](SECURITY.md) for detailed reporting procedures.
 ### Commercial Support Options
 
 For organizations requiring dedicated support, contact us at:
-**Email**: contact@glinr.dev
+**Email**: support@glincker.com
 
 **Enterprise support includes:**
 - Dedicated support engineer
@@ -251,7 +251,7 @@ Common areas needing improvement:
 | **Community** | GitHub Issues | 1-3 business days | General questions, bugs, features |
 | **Documentation** | Self-service | Immediate | Setup, configuration, troubleshooting |
 | **Security** | security@glinr.dev | 24 hours | Security vulnerabilities |
-| **Enterprise** | contact@glinr.dev | Varies by tier | Commercial support, custom needs |
+| **Enterprise** | support@glincker.com | Varies by tier | Commercial support, custom needs |
 
 ## Escalation Process
 
@@ -362,7 +362,7 @@ Help us improve GlinrDock:
 - Migration planning and execution
 - Architecture design review
 
-**Contact**: contact@glinr.dev for professional services inquiries.
+**Contact**: support@glincker.com for professional services inquiries.
 
 ---
 

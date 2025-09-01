@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security Vulnerability
-    url: https://github.com/GLINCKER/glinrdock/blob/main/SECURITY.md
+    url: https://github.com/GLINCKER/glinrdock-release/blob/main/SECURITY.md
     about: Report security vulnerabilities privately
   - name: General Discussion
-    url: https://github.com/GLINCKER/glinrdock/discussions
+    url: https://github.com/GLINCKER/glinrdock-release/discussions
     about: Ask questions and discuss features with the community
   - name: Documentation
-    url: https://github.com/GLINCKER/glinrdock/blob/main/README.md
+    url: https://github.com/GLINCKER/glinrdock-release/blob/main/README.md
     about: Read the documentation and guides

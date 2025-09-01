@@ -400,7 +400,7 @@ The binary distributions and documentation in this repository are licensed under
 
 ### Is commercial support available?
 
-Contact us at contact@glinr.dev for enterprise support options, including:
+Contact us at support@glincker.com for enterprise support options, including:
 - Dedicated support channels
 - Priority issue resolution
 - Custom feature development

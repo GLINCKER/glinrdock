@@ -61,7 +61,7 @@ jobs:
                 { text: 'Quick Start', link: '/QUICKSTART' },
                 { text: 'Security', link: '/SECURITY' },
                 { text: 'API', link: '/docs/API' },
-                { text: 'GitHub', link: 'https://github.com/GLINCKER/glinrdock' }
+                { text: 'GitHub', link: 'https://github.com/GLINCKER/glinrdock-release' }
               ],
               sidebar: [
                 '/',
