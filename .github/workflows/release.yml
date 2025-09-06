@@ -209,8 +209,8 @@ jobs:
           # Metadata
           LABEL org.opencontainers.image.title="GlinrDock Controller"
           LABEL org.opencontainers.image.description="Hardened container management service"
-          LABEL org.opencontainers.image.url="https://github.com/GLINCKER/glinrdock-release"
-          LABEL org.opencontainers.image.source="https://github.com/GLINCKER/glinrdock-release"
+          LABEL org.opencontainers.image.url="https://github.com/GLINCKER/glinrdock"
+          LABEL org.opencontainers.image.source="https://github.com/GLINCKER/glinrdock"
           LABEL org.opencontainers.image.version="${VERSION}"
           LABEL org.opencontainers.image.revision="${VCS_REF}"
           LABEL org.opencontainers.image.created="${BUILD_DATE}"

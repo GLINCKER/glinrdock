@@ -1,10 +1,10 @@
 site_name: GlinrDock Documentation
 site_description: Lightweight, secure container management platform
 site_author: GLINCKER LLC
-site_url: https://glincker.github.io/glinrdock-release/
+site_url: https://glincker.github.io/glinrdock/
 
-repo_name: GLINCKER/glinrdock-release
-repo_url: https://github.com/GLINCKER/glinrdock-release
+repo_name: GLINCKER/glinrdock
+repo_url: https://github.com/GLINCKER/glinrdock
 edit_uri: edit/main/docs/
 
 docs_dir: docs
@@ -84,7 +84,7 @@ markdown_extensions:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/GLINCKER/glinrdock-release
+      link: https://github.com/GLINCKER/glinrdock
       name: GitHub Repository
     - icon: fontawesome/solid/globe
       link: https://glincker.com
