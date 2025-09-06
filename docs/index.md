@@ -155,6 +155,6 @@ graph TB
 
 ## License
 
-This documentation and binary distribution repository is licensed under the MIT License. See [LICENSE](../LICENSE) for details.
+This documentation and binary distribution repository is licensed under the MIT License. See [LICENSE](https://github.com/GLINCKER/glinrdock/blob/main/LICENSE) for details.
 
 The main GlinrDock application source code is maintained in a separate private repository.

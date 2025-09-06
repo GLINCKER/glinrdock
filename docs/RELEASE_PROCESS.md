@@ -110,7 +110,7 @@ git push origin v1.0.0
 
 **Automated actions:**
 - Creates draft GitHub release
-- Auto-generates release notes using [.github/release.yml](../.github/release.yml)
+- Auto-generates release notes using [.github/release.yml](https://github.com/GLINCKER/glinrdock/blob/main/.github/release.yml)
 - Uploads artifacts from `_staging/$VERSION/` (if present)
 - Categorizes changes: Added, Changed, Fixed, Security
 
@@ -163,7 +163,7 @@ git push origin v1.0.0
 ## Release Validation Tools
 
 ### Automated Release Notes
-The repository uses [.github/release.yml](../.github/release.yml) to automatically generate categorized release notes:
+The repository uses [.github/release.yml](https://github.com/GLINCKER/glinrdock/blob/main/.github/release.yml) to automatically generate categorized release notes:
 
 - **🚀 Added**: New features and enhancements
 - **🔧 Changed**: Breaking changes and updates  
